@@ -1,8 +1,6 @@
 from colorsys import rgb_to_hsv,hsv_to_rgb
 from minescript_runtime import ScriptFunction
 from collections.abc import Callable
-from threading import Thread
-from atexit import register as register_at_exit
 
 
 class Colors:
@@ -113,7 +111,7 @@ class TextObject(BaseObject):
         return self.text,self.x,self.y,self.color,self.shadow,self.display_duration_modifier,self.layer,self.matrix
 
 # noinspection PyTypeChecker
-def add_text(text:str,x:int,y:int,color:int,shadow:bool,display_duration:float,layer:int)->int:
+def add_text(text:str,x:int,y:int,color:int,shadow:bool,display_duration:float,layer:int=1)->int:
     return (text,x,y,color,shadow,display_duration,layer)
 add_text=ScriptFunction("add_text",add_text)
 
@@ -131,23 +129,21 @@ def update_text(_id:int,text:str,x:int,y:int,color:int,shadow:bool,display_durat
     return (_id,text,x,y,color,shadow,display_duration,layer,*matrix.to_list())
 update_text=ScriptFunction("update_text",update_text)
 
-def _animate_text(_id:int,func:Callable[[TextObject],None])->None:
+def _animate_text(_id:int,func:Callable[[TextObject], None])->None:
     t=TextObject(_id)
     while (still_exists(_id)):
-        if (t.update(_id)):
-            func(t)
-            l=t.to_list()
-            if (any(map(lambda x:x is None,l))): return
-            update_text(_id,*l)
+        if (not t.update(_id)):
             wait_next_frame()
+            continue
+        func(t)
+        l=t.to_list()
+        if (any(x is None for x in l)):
+            return
+        update_text(_id,*l)
+        wait_next_frame()
 
 def animate_text(_id:int,func:Callable[[TextObject],None])->None:
     _animate_text(_id,func)
-
-def animate_text_on_different_thread(_id:int,func:Callable[[TextObject],None])->None:
-    task=Thread(target=_animate_text,args=(_id,func))
-    task.start()
-    task.join()
 
 def modify_text(_id:int,func:Callable[[TextObject],None])->None:
     t=TextObject(_id)
@@ -188,12 +184,12 @@ class RectangleObject(BaseObject):
         return self.start_x,self.start_y,self.end_x,self.end_y,self.color,self.display_duration_modifier,self.layer
 
 # noinspection PyTypeChecker
-def add_rectangle(sx:int,sy:int,w:int,h:int,color:int,display_duration:float,layer:int)->int:
+def add_rectangle(sx:int,sy:int,w:int,h:int,color:int,display_duration:float,layer:int=1)->int:
     return (sx,sy,sx+w,sy+h,color,display_duration,layer)
 add_rectangle=ScriptFunction("add_rectangle",add_rectangle)
 
 # noinspection PyTypeChecker
-def add_rectangle_from_corners(sx:int,sy:int,ex:int,ey:int,color:int,display_duration:float,layer:int)->int:
+def add_rectangle_from_corners(sx:int,sy:int,ex:int,ey:int,color:int,display_duration:float,layer:int=1)->int:
     return (sx,sy,ex,ey,color,display_duration,layer)
 add_rectangle_from_corners=ScriptFunction("add_rectangle_from_corners",add_rectangle_from_corners)
 
@@ -218,10 +214,6 @@ def _animate_rectangle(_id:int,func:Callable[[RectangleObject],None])->None:
 
 def animate_rectangle(_id:int,func:Callable[[RectangleObject],None])->None:
     _animate_rectangle(_id,func)
-
-def animate_rectangle_on_different_thread(_id:int,func:Callable[[RectangleObject],None])->None:
-    task=Thread(target=_animate_rectangle,args=(_id,func))
-    task.start()
 
 def modify_rectangle(_id:int,func:Callable[[RectangleObject],None])->None:
     b=RectangleObject(_id)
@@ -259,8 +251,8 @@ class GradientRectangleObject(BaseObject):
         return self.start_x,self.start_y,self.end_x,self.end_y,self.start_color,self.end_color,self.display_duration_modifier,self.layer
 
 # noinspection PyTypeChecker
-def add_gradient_rectangle(sx:int,sy:int,ex:int,ey:int,start_color:int,end_color:int,display_duration:float,layer:int)->int:
-    return (sx,sy,ex,ey,start_color,end_color,display_duration,layer)
+def add_gradient_rectangle(sx:int,sy:int,w:int,h:int,start_color:int,end_color:int,display_duration:float,layer:int=1)->int:
+    return (sx,sy,sx+w,sy+h,start_color,end_color,display_duration,layer)
 add_gradient_rectangle=ScriptFunction("add_gradient_rectangle",add_gradient_rectangle)
 
 # noinspection PyTypeChecker
@@ -284,10 +276,6 @@ def _animate_gradient_rectangle(_id:int,func:Callable[[GradientRectangleObject],
 
 def animate_gradient_rectangle(_id:int,func:Callable[[GradientRectangleObject],None])->None:
     _animate_gradient_rectangle(_id,func)
-
-def animate_gradient_rectangle_on_different_thread(_id:int,func:Callable[[GradientRectangleObject],None])->None:
-    task=Thread(target=_animate_gradient_rectangle,args=(_id,func))
-    task.start()
 
 def modify_gradient_rectangle(_id:int,func:Callable[[GradientRectangleObject],None])->None:
     b=GradientRectangleObject(_id)
@@ -324,7 +312,7 @@ class StrokedRectangleObject(BaseObject):
         return self.x,self.y,self.width,self.height,self.color,self.display_duration_modifier,self.layer
 
 # noinspection PyTypeChecker
-def add_stroked_rectangle(x:int,y:int,w:int,h:int,color:int,display_duration:float,layer:int)->int:
+def add_stroked_rectangle(x:int,y:int,w:int,h:int,color:int,display_duration:float,layer:int=1)->int:
     return (x,y,w,h,color,display_duration,layer)
 add_stroked_rectangle=ScriptFunction("add_stroked_rectangle",add_stroked_rectangle)
 
@@ -349,10 +337,6 @@ def _animate_stroked_rectangle(_id:int,func:Callable[[StrokedRectangleObject],No
 
 def animate_stroked_rectangle(_id:int,func:Callable[[StrokedRectangleObject],None])->None:
     _animate_stroked_rectangle(_id,func)
-
-def animate_stroked_rectangle_on_different_thread(_id:int,func:Callable[[StrokedRectangleObject],None])->None:
-    task=Thread(target=_animate_stroked_rectangle,args=(_id,func))
-    task.start()
 
 def modify_stroked_rectangle(_id:int,func:Callable[[StrokedRectangleObject],None])->None:
     b=StrokedRectangleObject(_id)
@@ -407,7 +391,7 @@ class TextWithBackgroundObject(BaseObject):
         return self.text,self.x,self.y,self.margin_x,self.margin_y,self.color,self.bg_color,self.shadow,self.display_duration_modifier,self.layer,self.matrix
 
 # noinspection PyTypeChecker
-def add_text_with_background(text:str,x:int,y:int,margin_x:int,margin_y:int,color:int,bg_color:int,shadow:bool,display_duration:float,layer:int)->int:
+def add_text_with_background(text:str,x:int,y:int,margin_x:int,margin_y:int,color:int,bg_color:int,shadow:bool,display_duration:float,layer:int=1)->int:
     return (text,x,y,margin_x,margin_y,color,bg_color,shadow,display_duration,layer)
 add_text_with_background=ScriptFunction("add_text_with_background",add_text_with_background)
 
@@ -437,11 +421,6 @@ def _animate_text_with_background(_id:int,func:Callable[[TextWithBackgroundObjec
 
 def animate_text_with_background(_id:int,func:Callable[[TextWithBackgroundObject],None])->None:
     _animate_text_with_background(_id,func)
-
-def animate_text_with_background_on_different_thread(_id:int,func:Callable[[TextWithBackgroundObject],None])->None:
-    task=Thread(target=_animate_text_with_background,args=(_id,func))
-    task.start()
-    task.join()
 
 def modify_text_with_background(_id:int,func:Callable[[TextWithBackgroundObject],None])->None:
     t=TextWithBackgroundObject(_id)
@@ -481,7 +460,7 @@ class ItemObject(BaseObject):
         return self.item,self.x,self.y,self.display_duration_modifier,self.layer,self.matrix
 
 # noinspection PyTypeChecker
-def add_item(item:str,x:int,y:int,display_duration:float,layer:int)->int:
+def add_item(item:str,x:int,y:int,display_duration:float,layer:int=1)->int:
     return (item,x,y,display_duration,layer)
 add_item=ScriptFunction("add_item",add_item)
 
@@ -511,11 +490,6 @@ def _animate_item(_id:int,func:Callable[[ItemObject],None])->None:
 
 def animate_item(_id:int,func:Callable[[ItemObject],None])->None:
     _animate_item(_id,func)
-
-def animate_item_on_different_thread(_id:int,func:Callable[[ItemObject],None])->None:
-    task=Thread(target=_animate_item,args=(_id,func))
-    task.start()
-    task.join()
 
 def modify_item(_id:int,func:Callable[[ItemObject],None])->None:
     t=ItemObject(_id)
@@ -558,7 +532,7 @@ class TextureObject(BaseObject):
         return self.texture,self.x,self.y,self.width,self.height,self.alpha,self.display_duration_modifier,self.layer,self.matrix
 
 # noinspection PyTypeChecker
-def add_texture(texture:Identifier,x:int,y:int,width:int,height:int,alpha:float,display_duration:float,layer:int)->int:
+def add_texture(texture:Identifier,x:int,y:int,width:int,height:int,alpha:float,display_duration:float,layer:int=1)->int:
     return (*texture.to_list(),x,y,width,height,alpha,display_duration,layer)
 add_texture=ScriptFunction("add_texture",add_texture)
 
@@ -589,11 +563,6 @@ def _animate_texture(_id:int,func:Callable[[TextureObject],None])->None:
 def animate_texture(_id:int,func:Callable[[TextureObject],None])->None:
     _animate_texture(_id,func)
 
-def animate_texture_on_different_thread(_id:int,func:Callable[[TextureObject],None])->None:
-    task=Thread(target=_animate_texture,args=(_id,func))
-    task.start()
-    task.join()
-
 def modify_texture(_id:int,func:Callable[[TextureObject],None])->None:
     t=TextureObject(_id)
     if (still_exists(_id)):
@@ -621,7 +590,6 @@ def rainbow_animation(t:BaseObject,step:int=1):
     elif (h<0): h=255
     r,g,b=hsv_to_rgb(h,s,v)
     t.color=argb(a,int(r*255),int(g*255),int(b*255))
-    t.text=str(t.display_duration)
 
 # noinspection PyTypeChecker
 def rainbow_animation_with_speed(step:int)->Callable[[BaseObject,int],None]:

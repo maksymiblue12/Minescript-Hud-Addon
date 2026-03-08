@@ -7,13 +7,10 @@ import net.minecraft.client.Mouse;
 import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.render.RenderTickCounter;
-import net.minecraft.command.CommandRegistryAccess;
 import net.minecraft.command.argument.ItemStackArgument;
-import net.minecraft.command.argument.ItemStackArgumentType;
 import net.minecraft.command.argument.ItemStringReader;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
-import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minescript.common.Jsonable;
 import org.joml.Matrix3x2f;
@@ -44,6 +41,7 @@ public class DrawHelper {
 
 	public void removeElement(int id) {
 		elements.remove(id);
+		elementUpdates.remove(id);
 	}
 
 	public boolean stillExists(int id) {
