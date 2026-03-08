@@ -1,0 +1,32 @@
+{
+	"schemaVersion": 1,
+	"id": "minescripthud",
+	"version": "${version}",
+	"name": "Minescript HUD Addon",
+	"description": "Allows Python to draw on screen.",
+	"authors": [
+		"Maks"
+	],
+	"contact": {
+		"homepage": "https://fabricmc.net/",
+		"sources": "https://github.com/FabricMC/fabric-example-mod"
+	},
+	"license": "CC0-1.0",
+	"icon": "assets/minescripthud/icon.png",
+	"environment": "client",
+	"entrypoints": {
+		"client": [
+			"net.mb.minescripthud.MinescriptHUDAddon"
+		]
+	},
+	"mixins": [
+		"minescripthud.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.18.4",
+		"minecraft": "~1.21.11",
+		"java": ">=21",
+		"fabric-api": "*",
+		"minescript": "*"
+	}
+}

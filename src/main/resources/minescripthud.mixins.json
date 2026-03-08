@@ -1,0 +1,15 @@
+{
+	"required": true,
+	"package": "net.mb.minescripthud.mixin",
+	"compatibilityLevel": "JAVA_21",
+	"mixins": [
+		"MinescriptMixin",
+		"SubprocessJobMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	},
+	"overwrites": {
+		"requireAnnotations": true
+	}
+}
