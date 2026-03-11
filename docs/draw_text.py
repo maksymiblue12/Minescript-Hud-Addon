@@ -1,5 +1,4 @@
 from colorsys import rgb_to_hsv,hsv_to_rgb
-from minescript_runtime import ScriptFunction
 from collections.abc import Callable
 
 
@@ -73,12 +72,64 @@ class Identifier:
 
 
 class TextObject(BaseObject):
+	"""
+	This class represents a text element. To create a TextObject object, call the constructor with the id of the text element.
+	"""
 	# noinspection PyMissingConstructor
 	def __init__(self,_id:int):
+		#: The text of the text element.
+		self.text:str=""
+
+		#: The x coordinate of the text.
+		self.x:int=0
+
+		#: The y coordinate of the text.
+		self.y:int=0
+
+		#: The width of the text element. This property cannot be assigned.
+		self.width:int
+
+		#: The height of the text element. This property cannot be assigned.
+		self.height:int
+
+		#: ``True`` if the text element has a shadow ``False`` otherwise.
+		self.shadow:bool=False
+
+		#: The color of the text. Must be created by the [argb]() function or from the [Colors]() class.
+		self.color:int=0
+
+		#: The time in seconds that the text will remain on screen. This property cannot be assigned, use :attr:`display_duration_modifier <TextObject.display_duration_modifier>` to change this value.
+		self.display_duration:float
+
+		#: The modifier to the text element :attr:`display_duration <TextObject.display_duration>` property.
+		self.display_duration_modifier:float=0
+
+		#: The layer of the text element.
+		self.layer:int=1
+
+		#: The scale/rotation/translation matrix of the text element.
+		self.matrix:Matrix=Matrix()
 		self.update(_id)
+
+	@property
+	def width(self):
+		return self._width
+
+	@property
+	def height(self):
+		return self._height
+
+	@property
+	def display_duration(self):
+		return self._display_duration
 
 	# noinspection PyAttributeOutsideInit
 	def update(self,_id:int):
+		"""
+		Updates this TextObject with the values of the text element specified by _id.
+
+		:param _id: The id of the text element.
+		"""
 		info=get_text_object(_id)
 		if (info is None or any(map(lambda x:x is None,info.values()))):
 			return False
@@ -95,39 +146,53 @@ class TextObject(BaseObject):
 		self._height=info["height"]
 		return True
 
-	@property
-	def width(self):
-		return self._width
+	def to_list(self)->list:
+		"""
+		Returns a list containing all the values of this TextObject.
 
-	@property
-	def height(self):
-		return self._height
-
-	@property
-	def display_duration(self):
-		return self._display_duration
-
-	def to_list(self):
-		return self.text,self.x,self.y,self.color,self.shadow,self.display_duration_modifier,self.layer,self.matrix
+		:return: A list containing all the values of this TextObject.
+		"""
+		return [self.text,self.x,self.y,self.color,self.shadow,self.display_duration_modifier,self.layer,self.matrix]
 
 # noinspection PyTypeChecker
 def add_text(text:str,x:int,y:int,color:int,shadow:bool,display_duration:float,layer:int=1)->int:
+	"""
+	Add a text element to the screen.
+
+	:param text: The text to display.
+	:param x: The x-coordinate of the text position.
+	:param y: The y-coordinate of the text position.
+	:param color: The text color. Must be created with `argb(...)` or taken from the `Colors` class.
+	:param shadow: Whether the text should render with a shadow.
+	:param display_duration: How long the text remains on screen (in seconds).
+	:param layer: Rendering layer of the text element. Higher layers appear above lower ones. Default is 1.
+	:return: The ID of the created text element.
+	"""
 	return (text,x,y,color,shadow,display_duration,layer)
-add_text=ScriptFunction("add_text",add_text)
 
 # noinspection PyTypeChecker
 def add_advanced_text(text:str,x:int,y:int,color:int,shadow:bool,display_duration:float,layer:int,matrix:Matrix)->int:
+	"""
+	Add a text element to the screen.
+
+	:param text: The text to display.
+	:param x: The x-coordinate of the text position.
+	:param y: The y-coordinate of the text position.
+	:param color: The text color. Must be created with `argb(...)` or taken from the `Colors` class.
+	:param shadow: Whether the text should render with a shadow.
+	:param display_duration: How long the text remains on screen (in seconds).
+	:param layer: Rendering layer of the text element. Higher layers appear above lower ones. Default is 1.
+	:param matrix: The scale/rotation/translation matrix of the text element. See :class:`Matrix`.
+	:return: The ID of the created text element.
+	"""
 	return (text,x,y,color,shadow,display_duration,layer,*matrix.to_list())
-add_advanced_text=ScriptFunction("add_advanced_text",add_advanced_text)
 
 # noinspection PyTypeChecker
 def get_text_object(_id:int)->dict:
 	return (_id,)
-get_text_object=ScriptFunction("get_text_object",get_text_object)
 
 def update_text(_id:int,text:str,x:int,y:int,color:int,shadow:bool,display_duration:float,layer:int,matrix:Matrix):
 	return (_id,text,x,y,color,shadow,display_duration,layer,*matrix.to_list())
-update_text=ScriptFunction("update_text",update_text)
 
 def _animate_text(_id:int,func:Callable[[TextObject], None])->None:
 	t=TextObject(_id)
@@ -143,9 +208,21 @@ def _animate_text(_id:int,func:Callable[[TextObject], None])->None:
 		wait_next_frame()
 
 def animate_text(_id:int,func:Callable[[TextObject],None])->None:
+	"""
+	Animates the text element with the given id by calling the given function every frame with the text element as the argument.
+
+	:param _id: The id of the text element to animate.
+	:param func: The function to use to animate the text element. The function is called every frame with the text element as the argument.
+	"""
 	_animate_text(_id,func)
 
 def modify_text(_id:int,func:Callable[[TextObject],None])->None:
+	"""
+	Modifies the text element with the given id by calling the given function once with the text element as the argument.
+
+	:param _id: The id of the text element to animate.
+	:param func: The function to use to modify the text element. The function is called on the closest render frame.
+	"""
 	t=TextObject(_id)
 	if (still_exists(_id)):
 		if (t.update(_id)):
@@ -186,21 +263,17 @@ class RectangleObject(BaseObject):
 # noinspection PyTypeChecker
 def add_rectangle(sx:int,sy:int,w:int,h:int,color:int,display_duration:float,layer:int=1)->int:
 	return (sx,sy,sx+w,sy+h,color,display_duration,layer)
-add_rectangle=ScriptFunction("add_rectangle",add_rectangle)
 
 # noinspection PyTypeChecker
 def add_rectangle_from_corners(sx:int,sy:int,ex:int,ey:int,color:int,display_duration:float,layer:int=1)->int:
 	return (sx,sy,ex,ey,color,display_duration,layer)
-add_rectangle_from_corners=ScriptFunction("add_rectangle_from_corners",add_rectangle_from_corners)
 
 # noinspection PyTypeChecker
 def get_rectangle_object(_id:int)->dict:
 	return (_id,)
-get_rectangle_object=ScriptFunction("get_rectangle_object",get_rectangle_object)
 
 def update_rectangle(_id:int,sx:int,sy:int,ex:int,ey:int,color:int,display_duration:float,layer:int):
 	return (_id,sx,sy,ex,ey,color,display_duration,layer)
-update_rectangle=ScriptFunction("update_rectangle",update_rectangle)
 
 def _animate_rectangle(_id:int,func:Callable[[RectangleObject],None])->None:
 	b=RectangleObject(_id)
@@ -253,16 +326,13 @@ class GradientRectangleObject(BaseObject):
 # noinspection PyTypeChecker
 def add_gradient_rectangle(sx:int,sy:int,w:int,h:int,start_color:int,end_color:int,display_duration:float,layer:int=1)->int:
 	return (sx,sy,sx+w,sy+h,start_color,end_color,display_duration,layer)
-add_gradient_rectangle=ScriptFunction("add_gradient_rectangle",add_gradient_rectangle)
 
 # noinspection PyTypeChecker
 def get_gradient_rectangle_object(_id:int)->dict:
 	return (_id,)
-get_gradient_rectangle_object=ScriptFunction("get_gradient_rectangle_object",get_gradient_rectangle_object)
 
 def update_gradient_rectangle(_id:int,sx:int,sy:int,ex:int,ey:int,start_color:int,end_color:int,display_duration:float,layer:int):
 	return (_id,sx,sy,ex,ey,start_color,end_color,display_duration,layer)
-update_gradient_rectangle=ScriptFunction("update_gradient_rectangle",update_gradient_rectangle)
 
 def _animate_gradient_rectangle(_id:int,func:Callable[[GradientRectangleObject],None])->None:
 	b=GradientRectangleObject(_id)
@@ -314,16 +384,13 @@ class StrokedRectangleObject(BaseObject):
 # noinspection PyTypeChecker
 def add_stroked_rectangle(x:int,y:int,w:int,h:int,color:int,display_duration:float,layer:int=1)->int:
 	return (x,y,w,h,color,display_duration,layer)
-add_stroked_rectangle=ScriptFunction("add_stroked_rectangle",add_stroked_rectangle)
 
 # noinspection PyTypeChecker
 def get_stroked_rectangle_object(_id:int)->dict:
 	return (_id,)
-get_stroked_rectangle_object=ScriptFunction("get_stroked_rectangle_object",get_stroked_rectangle_object)
 
 def update_stroked_rectangle(_id:int,x:int,y:int,w:int,h:int,color:int,display_duration:float,layer:int):
 	return (_id,x,y,w,h,color,display_duration,layer)
-update_stroked_rectangle=ScriptFunction("update_stroked_rectangle",update_stroked_rectangle)
 
 def _animate_stroked_rectangle(_id:int,func:Callable[[StrokedRectangleObject],None])->None:
 	b=StrokedRectangleObject(_id)
@@ -393,21 +460,17 @@ class TextWithBackgroundObject(BaseObject):
 # noinspection PyTypeChecker
 def add_text_with_background(text:str,x:int,y:int,margin_x:int,margin_y:int,color:int,bg_color:int,shadow:bool,display_duration:float,layer:int=1)->int:
 	return (text,x,y,margin_x,margin_y,color,bg_color,shadow,display_duration,layer)
-add_text_with_background=ScriptFunction("add_text_with_background",add_text_with_background)
 
 # noinspection PyTypeChecker
 def add_advanced_text_with_background(text:str,x:int,y:int,margin_x:int,margin_y:int,color:int,bg_color:int,shadow:bool,display_duration:float,layer:int,matrix:Matrix)->int:
 	return (text,x,y,margin_x,margin_y,color,bg_color,shadow,display_duration,layer,*matrix.to_list())
-add_advanced_text_with_background=ScriptFunction("add_advanced_text_with_background",add_advanced_text_with_background)
 
 # noinspection PyTypeChecker
 def get_text_with_background_object(_id:int)->dict:
 	return (_id,)
-get_text_with_background_object=ScriptFunction("get_text_with_background_object",get_text_with_background_object)
 
 def update_text_with_background(_id:int,text:str,x:int,y:int,margin_x:int,margin_y:int,color:int,bg_color:int,shadow:bool,display_duration:float,layer:int,matrix:Matrix):
 	return (_id,text,x,y,margin_x,margin_y,color,bg_color,shadow,display_duration,layer,*matrix.to_list())
-update_text_with_background=ScriptFunction("update_text_with_background",update_text_with_background)
 
 def _animate_text_with_background(_id:int,func:Callable[[TextWithBackgroundObject],None])->None:
 	t=TextWithBackgroundObject(_id)
@@ -462,21 +525,17 @@ class ItemObject(BaseObject):
 # noinspection PyTypeChecker
 def add_item(item:str,x:int,y:int,display_duration:float,layer:int=1)->int:
 	return (item,x,y,display_duration,layer)
-add_item=ScriptFunction("add_item",add_item)
 
 # noinspection PyTypeChecker
 def add_advanced_item(item:str,x:int,y:int,display_duration:float,layer:int,matrix:Matrix)->int:
 	return (item,x,y,display_duration,layer,*matrix.to_list())
-add_advanced_item=ScriptFunction("add_advanced_item",add_advanced_item)
 
 # noinspection PyTypeChecker
 def get_item_object(_id:int)->dict:
 	return (_id,)
-get_item_object=ScriptFunction("get_item_object",get_item_object)
 
 def update_item(_id:int,item:str,x:int,y:int,display_duration:float,layer:int,matrix:Matrix):
 	return (_id,item,x,y,display_duration,layer,*matrix.to_list())
-update_item=ScriptFunction("update_item",update_item)
 
 def _animate_item(_id:int,func:Callable[[ItemObject],None])->None:
 	t=ItemObject(_id)
@@ -534,21 +593,17 @@ class TextureObject(BaseObject):
 # noinspection PyTypeChecker
 def add_texture(texture:Identifier,x:int,y:int,width:int,height:int,alpha:float,display_duration:float,layer:int=1)->int:
 	return (*texture.to_list(),x,y,width,height,alpha,display_duration,layer)
-add_texture=ScriptFunction("add_texture",add_texture)
 
 # noinspection PyTypeChecker
 def add_advanced_texture(texture:Identifier,x:int,y:int,width:int,height:int,alpha:float,display_duration:float,layer:int,matrix:Matrix)->int:
 	return (*texture.to_list(),x,y,width,height,alpha,display_duration,layer,*matrix.to_list())
-add_advanced_texture=ScriptFunction("add_advanced_texture",add_advanced_texture)
 
 # noinspection PyTypeChecker
 def get_texture_object(_id:int)->dict:
 	return (_id,)
-get_texture_object=ScriptFunction("get_texture_object",get_texture_object)
 
 def update_texture(_id:int,texture:Identifier,x:int,y:int,width:int,height:int,alpha:float,display_duration:float,layer:int,matrix:Matrix):
 	return (_id,*texture.to_list(),x,y,width,height,alpha,display_duration,layer,*matrix.to_list())
-update_texture=ScriptFunction("update_texture",update_texture)
 
 def _animate_texture(_id:int,func:Callable[[TextureObject],None])->None:
 	t=TextureObject(_id)
@@ -619,31 +674,24 @@ def argb_to_int(color:int)->tuple[int,int,int,int]:
 
 def remove_element(_id:int):
 	return (_id,)
-remove_element=ScriptFunction("remove_element",remove_element)
 
 def still_exists(_id:int):
 	return (_id,)
-still_exists=ScriptFunction("still_exists",still_exists)
 
 def _get_mouse():
 	return ()
-_get_mouse=ScriptFunction("get_mouse",_get_mouse)
 
 def get_mouse():
 	return MouseObject(_get_mouse())
 
 def get_font_height():
 	return ()
-get_font_height=ScriptFunction("get_font_height",get_font_height)
 
 def clear():
 	return ()
-clear=ScriptFunction("clear",clear)
 
 def wait_next_frame():
 	return ()
-wait_next_frame=ScriptFunction("wait_next_frame",wait_next_frame)
 
 def suppress_done_message():
 	return ()
-suppress_done_message=ScriptFunction("suppress_done_message",suppress_done_message)
