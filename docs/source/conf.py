@@ -9,9 +9,9 @@ import shutil
 import subprocess
 
 print("clearing previous build")
-shutil.rmtree("../build/")
+#shutil.rmtree("../build/")
 print("updating doc file")
-subprocess.run("py ../make_doc_file.py")
+#subprocess.run("py ../make_doc_file.py")
 
 sys.path.insert(0, os.path.abspath("../"))
 
