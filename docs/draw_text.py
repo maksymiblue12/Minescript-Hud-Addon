@@ -77,37 +77,37 @@ class TextObject(BaseObject):
 	"""
 	# noinspection PyMissingConstructor
 	def __init__(self,_id:int):
-		#: The text of the text element.
+		#: Text of the text element.
 		self.text:str=""
 
-		#: The x coordinate of the text.
+		#: X-coordinate of the text.
 		self.x:int=0
 
-		#: The y coordinate of the text.
+		#: Y-coordinate of the text.
 		self.y:int=0
 
-		#: The width of the text element. This property cannot be assigned.
+		#: Width of the text. This property cannot be assigned.
 		self.width:int
 
-		#: The height of the text element. This property cannot be assigned.
+		#: Height of the text. This property cannot be assigned.
 		self.height:int
 
-		#: ``True`` if the text element has a shadow ``False`` otherwise.
-		self.shadow:bool=False
-
-		#: The color of the text. Must be created by the [argb]() function or from the [Colors]() class.
+		#: Text color. Must be created by the [argb]() function or from the [Colors]() class.
 		self.color:int=0
 
-		#: The time in seconds that the text will remain on screen. This property cannot be assigned, use :attr:`display_duration_modifier <TextObject.display_duration_modifier>` to change this value.
+		#: ``True`` if the text has a shadow ``False`` otherwise.
+		self.shadow:bool=False
+
+		#: Time in seconds that the element will remain on screen. This property cannot be assigned, use :attr:`display_duration_modifier <TextObject.display_duration_modifier>` to change this value.
 		self.display_duration:float
 
-		#: The modifier to the text element :attr:`display_duration <TextObject.display_duration>` property.
+		#: Modifier to the :attr:`display_duration <TextObject.display_duration>` property.
 		self.display_duration_modifier:float=0
 
-		#: The layer of the text element.
+		#: Layer of the element.
 		self.layer:int=1
 
-		#: The scale/rotation/translation matrix of the text element.
+		#: Transformation matrix applied to the element (scale, rotation, translation).
 		self.matrix:Matrix=Matrix()
 		self.update(_id)
 
@@ -154,36 +154,40 @@ class TextObject(BaseObject):
 		"""
 		return [self.text,self.x,self.y,self.color,self.shadow,self.display_duration_modifier,self.layer,self.matrix]
 
+
 # noinspection PyTypeChecker
 def add_text(text:str,x:int,y:int,color:int,shadow:bool,display_duration:float,layer:int=1)->int:
 	"""
 	Add a text element to the screen.
 
-	:param text: The text to display.
-	:param x: The x-coordinate of the text position.
-	:param y: The y-coordinate of the text position.
-	:param color: The text color. Must be created with `argb(...)` or taken from the `Colors` class.
-	:param shadow: Whether the text should render with a shadow.
+	:param text: Text to display.
+	:param x: X-coordinate of the text position.
+	:param y: Y-coordinate of the text position.
+	:param color: Text color. Must be created with `argb(...)` or taken from the `Colors` class.
+	:param shadow: Whether the text should be rendered with a shadow.
 	:param display_duration: How long the text remains on screen (in seconds).
 	:param layer: Rendering layer of the text element. Higher layers appear above lower ones. Default is 1.
-	:return: The ID of the created text element.
+	:return: ID of the created text element.
 	"""
 	return (text,x,y,color,shadow,display_duration,layer)
 
 # noinspection PyTypeChecker
 def add_advanced_text(text:str,x:int,y:int,color:int,shadow:bool,display_duration:float,layer:int,matrix:Matrix)->int:
 	"""
-	Add a text element to the screen.
+	Add a text element to the screen, with additional scaling, rotation, and translation options.
+	
+	Advanced version of :func:`add_text` that allows custom transformations.
 
-	:param text: The text to display.
-	:param x: The x-coordinate of the text position.
-	:param y: The y-coordinate of the text position.
-	:param color: The text color. Must be created with `argb(...)` or taken from the `Colors` class.
-	:param shadow: Whether the text should render with a shadow.
+	:param text: Text to display.
+	:param x: X-coordinate of the text position.
+	:param y: Y-coordinate of the text position.
+	:param color: Text color. Must be created with `argb(...)` or taken from the `Colors` class.
+	:param shadow: Whether the text should be rendered with a shadow.
 	:param display_duration: How long the text remains on screen (in seconds).
-	:param layer: Rendering layer of the text element. Higher layers appear above lower ones. Default is 1.
-	:param matrix: The scale/rotation/translation matrix of the text element. See :class:`Matrix`.
-	:return: The ID of the created text element.
+	:param layer: Rendering layer of the text element. Higher layers appear above lower ones.
+	:param matrix: Transformation matrix applied to the text (scale, rotation, translation).
+		See :class:`Matrix`.
+	:return: ID of the created text element.
 	"""
 	return (text,x,y,color,shadow,display_duration,layer,*matrix.to_list())
 
@@ -211,8 +215,8 @@ def animate_text(_id:int,func:Callable[[TextObject],None])->None:
 	"""
 	Animates the text element with the given id by calling the given function every frame with the text element as the argument.
 
-	:param _id: The id of the text element to animate.
-	:param func: The function to use to animate the text element. The function is called every frame with the text element as the argument.
+	:param _id: ID of the text element to animate.
+	:param func: Function to use to animate the text element. The function is called every frame with the text element as the argument.
 	"""
 	_animate_text(_id,func)
 
@@ -220,8 +224,8 @@ def modify_text(_id:int,func:Callable[[TextObject],None])->None:
 	"""
 	Modifies the text element with the given id by calling the given function once with the text element as the argument.
 
-	:param _id: The id of the text element to animate.
-	:param func: The function to use to modify the text element. The function is called on the closest render frame.
+	:param _id: ID of the text element to animate.
+	:param func: Function to use to modify the text element. The function is called on the closest render frame.
 	"""
 	t=TextObject(_id)
 	if (still_exists(_id)):
@@ -419,10 +423,68 @@ def modify_stroked_rectangle(_id:int,func:Callable[[StrokedRectangleObject],None
 class TextWithBackgroundObject(BaseObject):
 	# noinspection PyMissingConstructor
 	def __init__(self,_id:int):
+		#: Text of the text element.
+		self.text:str=""
+
+		#: X-coordinate of the text.
+		self.x:int=0
+
+		#: Y-coordinate of the text.
+		self.y:int=0
+
+		#: Width of the text. This property cannot be assigned.
+		self.width:int
+
+		#: Height of the text. This property cannot be assigned.
+		self.height:int
+
+		#: Horizontal padding between the text and the background box.
+		self.margin_x:int=0
+
+		#: Vertical padding between the text and the background box.
+		self.margin_y:int=0
+
+		#: Text color. Must be created by the [argb]() function or from the [Colors]() class.
+		self.color:int=0
+
+		#: Background color. Must be created with `argb(...)` or taken from the `Colors` class.
+		self.bg_color:int=0
+
+		#: ``True`` if the text has a shadow ``False`` otherwise.
+		self.shadow:bool=False
+
+		#: Time in seconds that the text will remain on screen. This property cannot be assigned, use :attr:`display_duration_modifier <TextWithBackgroundObject.display_duration_modifier>` to change this value.
+		self.display_duration:float
+
+		#: Modifier to the :attr:`display_duration <TextWithBackgroundObject.display_duration>` property.
+		self.display_duration_modifier:float=0
+
+		#: Layer of the element.
+		self.layer:int=1
+
+		#: Transformation matrix applied to the element (scale, rotation, translation).
+		self.matrix:Matrix=Matrix()
 		self.update(_id)
+
+	@property
+	def width(self):
+		return self._width
+
+	@property
+	def height(self):
+		return self._height
+
+	@property
+	def display_duration(self):
+		return self._display_duration
 
 	# noinspection PyAttributeOutsideInit
 	def update(self,_id:int):
+		"""
+		Updates this TextObject with the values of the text element specified by _id.
+
+		:param _id: The id of the text element.
+		"""
 		info=get_text_with_background_object(_id)
 		if (info is None or any(map(lambda x:x is None,info.values()))):
 			return False
@@ -442,27 +504,54 @@ class TextWithBackgroundObject(BaseObject):
 		self._height=info["height"]
 		return True
 
-	@property
-	def width(self):
-		return self._width
-
-	@property
-	def height(self):
-		return self._height
-
-	@property
-	def display_duration(self):
-		return self._display_duration
-
 	def to_list(self):
+		"""
+		Returns a list containing all the values of this TextWithBackgroundObject.
+
+		:return: A list containing all the values of this TextWithBackgroundObject.
+		"""
 		return self.text,self.x,self.y,self.margin_x,self.margin_y,self.color,self.bg_color,self.shadow,self.display_duration_modifier,self.layer,self.matrix
 
 # noinspection PyTypeChecker
 def add_text_with_background(text:str,x:int,y:int,margin_x:int,margin_y:int,color:int,bg_color:int,shadow:bool,display_duration:float,layer:int=1)->int:
+	"""
+	Add a text element with a background to the screen.
+
+	:param text: Text to display.
+	:param x: X-coordinate of the text position.
+	:param y: Y-coordinate of the text position.
+	:param margin_x: Horizontal padding between the text and the background box.
+	:param margin_y: Vertical padding between the text and the background box.
+	:param color: Text color. Must be created with `argb(...)` or taken from the `Colors` class.
+	:param bg_color: Background color. Must be created with `argb(...)` or taken from the `Colors` class.
+	:param shadow: Whether the text should be rendered with a shadow.
+	:param display_duration: How long the text remains on screen (in seconds).
+	:param layer: Rendering layer of the text element. Higher layers appear above lower ones. Default is 1.
+	:return: ID of the created text element.
+	"""
 	return (text,x,y,margin_x,margin_y,color,bg_color,shadow,display_duration,layer)
 
 # noinspection PyTypeChecker
 def add_advanced_text_with_background(text:str,x:int,y:int,margin_x:int,margin_y:int,color:int,bg_color:int,shadow:bool,display_duration:float,layer:int,matrix:Matrix)->int:
+	"""
+	Add a text element with a background to the screen, with additional scaling, rotation, and translation options.
+
+	Advanced version of :func:`add_text_with_background` that allows custom transformations.
+
+	:param text: Text to display.
+	:param x: X-coordinate of the text position.
+	:param y: Y-coordinate of the text position.
+	:param margin_x: Horizontal padding between the text and the background box.
+	:param margin_y: Vertical padding between the text and the background box.
+	:param color: Text color. Must be created with `argb(...)` or taken from the `Colors` class.
+	:param bg_color: Background color. Must be created with `argb(...)` or taken from the `Colors` class.
+	:param shadow: Whether the text should be rendered with a shadow.
+	:param display_duration: How long the text remains on screen (in seconds).
+	:param layer: Rendering layer of the text element. Higher layers appear above lower ones.
+	:param matrix: Transformation matrix applied to the text (scale, rotation, translation).
+		See :class:`Matrix`.
+	:return: ID of the created text element.
+	"""
 	return (text,x,y,margin_x,margin_y,color,bg_color,shadow,display_duration,layer,*matrix.to_list())
 
 # noinspection PyTypeChecker
@@ -483,9 +572,21 @@ def _animate_text_with_background(_id:int,func:Callable[[TextWithBackgroundObjec
 			wait_next_frame()
 
 def animate_text_with_background(_id:int,func:Callable[[TextWithBackgroundObject],None])->None:
+	"""
+	Animates the text with background element with the given id by calling the given function every frame with the text with background element as the argument.
+
+	:param _id: ID of the text element to animate.
+	:param func: Function to use to animate the text element. The function is called every frame with the text with background element as the argument.
+	"""
 	_animate_text_with_background(_id,func)
 
 def modify_text_with_background(_id:int,func:Callable[[TextWithBackgroundObject],None])->None:
+	"""
+	Modifies the text with background element with the given id by calling the given function once with the text with background element as the argument.
+
+	:param _id: ID of the text element to animate.
+	:param func: Function to use to modify the text element. The function is called on the closest render frame.
+	"""
 	t=TextWithBackgroundObject(_id)
 	if (still_exists(_id)):
 		if (t.update(_id)):

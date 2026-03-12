@@ -5,13 +5,14 @@
 
 import sys
 import os
-import shutil
-import subprocess
 
-print("clearing previous build")
-#shutil.rmtree("../build/")
-print("updating doc file")
-#subprocess.run("py ../make_doc_file.py")
+if (sys.platform=="win32"):
+	import shutil
+	import subprocess
+	print("clearing previous build")
+	shutil.rmtree("../build/")
+	print("updating doc file")
+	subprocess.run("py ../make_doc_file.py")
 
 sys.path.insert(0, os.path.abspath("../"))
 
