@@ -7,3 +7,4 @@ API
 
     text
     text_bg
+    rect
