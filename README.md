@@ -1,6 +1,6 @@
 # Minescript HUD Addon
 
-This addon adds the ability to draw custom HUD elements in [Minescript](https://modrinth.com/mod/minescript).
+This mod adds the ability to draw custom HUD elements in [Minescript](https://modrinth.com/mod/minescript).
 <br></br>
 ## Features
  - Draw ***text*** on the HUD
@@ -40,6 +40,7 @@ Elements are rendered in layers.
 Elements with higher layer values render above elements with lower layers.
 <br></br>
 ## API Overview
+> A more detailed API can be found on the [wiki](https://maksymiblue12.github.io/Minescript-Hud-Addon/).
 ### Text
  - `add_text(...)`
  - `add_text_with_background(...)`
