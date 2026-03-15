@@ -8,3 +8,4 @@ API
     text
     text_bg
     rect
+    gradient_rect

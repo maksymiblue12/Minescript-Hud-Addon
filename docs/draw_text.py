@@ -367,10 +367,37 @@ def modify_rectangle(_id:int,func:Callable[[RectangleObject],None])->None:
 class GradientRectangleObject(BaseObject):
 	# noinspection PyMissingConstructor
 	def __init__(self,_id:int):
+		#: X-coordinate of the upper-left corner.
+		self.start_x:int=0
+		#: Y-coordinate of the upper-left corner.
+		self.start_y:int=0
+		#: X-coordinate of the bottom-right corner.
+		self.end_x:int=1
+		#: Y-coordinate of the bottom-right corner.
+		self.end_y:int=1
+		#: Color at the top of the rectangle. Must be created by the [argb]() function or from the [Colors]() class.
+		self.start_color:int=0
+		#: Color at the bottom of the rectangle. Must be created by the [argb]() function or from the [Colors]() class.
+		self.end_color:int=0
+		#: Time in seconds that the element will remain on screen. This property cannot be assigned, use :attr:`display_duration_modifier <RectangleObject.display_duration_modifier>` to change this value.
+		self.display_duration:float
+		#: Modifier to the :attr:`display_duration <RectangleObject.display_duration>` property.
+		self.display_duration_modifier:float=0
+		#: Layer of the element.
+		self.layer:int=1
 		self.update(_id)
+
+	@property
+	def display_duration(self):
+		return self._display_duration
 
 	# noinspection PyAttributeOutsideInit
 	def update(self,_id:int):
+		"""
+		Updates this GradientRectangleObject with the values of the gradient rectangle element specified by _id.
+
+		:param _id: ID of the gradient rectangle element.
+		"""
 		info=get_rectangle_object(_id)
 		if (info is None or any(map(lambda x:x is None,info.values()))):
 			return False
@@ -385,15 +412,29 @@ class GradientRectangleObject(BaseObject):
 		self.layer:int=info["layer"]
 		return True
 
-	@property
-	def display_duration(self):
-		return self._display_duration
+	def to_list(self)->list:
+		"""
+		Returns a list containing all the values of this GradientRectangleObject.
 
-	def to_list(self):
-		return self.start_x,self.start_y,self.end_x,self.end_y,self.start_color,self.end_color,self.display_duration_modifier,self.layer
+		:return: List containing all the values of this GradientRectangleObject.
+		"""
+		return [self.start_x,self.start_y,self.end_x,self.end_y,self.start_color,self.end_color,self.display_duration_modifier,self.layer]
 
 # noinspection PyTypeChecker
 def add_gradient_rectangle(sx:int,sy:int,w:int,h:int,start_color:int,end_color:int,display_duration:float,layer:int=1)->int:
+	"""
+	Add a gradient rectangle element to the screen.
+
+	:param sx: X-coordinate of the upper-left corner.
+	:param sy: Y-coordinate of the upper-left corner.
+	:param w: Width of the rectangle.
+	:param h: Height of the rectangle.
+	:param start_color: Color at the top of the rectangle. Must be created by the [argb]() function or from the [Colors]() class.
+	:param end_color: Color at the bottom of the rectangle. Must be created by the [argb]() function or from the [Colors]() class.
+	:param display_duration: How long the element remains on screen (in seconds).
+	:param layer: Rendering layer of the element. Higher layers appear above lower ones. Default is 1.
+	:return: ID of the created element.
+	"""
 	return (sx,sy,sx+w,sy+h,start_color,end_color,display_duration,layer)
 
 # noinspection PyTypeChecker
@@ -414,9 +455,21 @@ def _animate_gradient_rectangle(_id:int,func:Callable[[GradientRectangleObject],
 			wait_next_frame()
 
 def animate_gradient_rectangle(_id:int,func:Callable[[GradientRectangleObject],None])->None:
+	"""
+	Animates the gradient rectangle element with the given id by calling the given function every frame with the gradient rectangle element as the argument.
+
+	:param _id: ID of the gradient rectangle element to animate.
+	:param func: Function to use to animate the gradient rectangle element. The function is called every frame with the gradient rectangle element as the argument.
+	"""
 	_animate_gradient_rectangle(_id,func)
 
 def modify_gradient_rectangle(_id:int,func:Callable[[GradientRectangleObject],None])->None:
+	"""
+	Modifies the gradient rectangle element with the given id by calling the given function once with the gradient rectangle element as the argument.
+
+	:param _id: ID of the gradient rectangle element to modify.
+	:param func: Function to use to modify the gradient rectangle element. The function is called on the closest render frame.
+	"""
 	b=GradientRectangleObject(_id)
 	if (still_exists(_id)):
 		if (b.update(_id)):

@@ -27,7 +27,7 @@ inside your Minecraft directory.
 3. Install the Mod
 ------------------
 
-Download the latest release of **Minescript HUD Addon** and place the ``.jar`` file
+Download the latest version of `Minescript HUD Addon <https://modrinth.com/mod/minescript-hud-addon/versions>`_ and place the ``.jar`` file
 into the same ``mods`` folder.
 
 4. Launch Minecraft
