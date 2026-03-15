@@ -1,4 +1,4 @@
-from draw_text import *
+from system.lib.draw_text import *
 from math import radians
 
 clear()
@@ -15,7 +15,7 @@ add_text("This is a stroked rectangle:",10,130,full,False,10,1)
 add_stroked_rectangle(10,145,50,20,argb(255,255,0,0),10,1)
 add_text("This is a diamond:",10,175,full,False,10,1)
 add_item("diamond",10,190,10,1)
-add_text("This is a minecraft texture (hardcore_full.png):",10,206,full,False,10,1)
-add_texture(Identifier("hud/heart/hardcore_full",True),10,221,16,16,1.0,10,1)
-add_advanced_text("Elements can be scaled",69,221+16+30,full,False,10,1,Matrix().scale(2))
-add_advanced_text("and rotated",10,221+16+30+40+15,full,False,10,1,Matrix().rotate(radians(45)))
+add_text("This is a minecraft texture (hardcore_full.png):",10,216,full,False,10,1)
+add_texture(Identifier("hud/heart/hardcore_full",True),10,231,16,16,1.0,10,1)
+add_advanced_text("Elements can be scaled",69,221+16+40,full,False,10,1,Matrix().scale(2))
+add_advanced_text("and rotated",10,221+16+40+40+15,full,False,10,1,Matrix().rotate(radians(45)))
