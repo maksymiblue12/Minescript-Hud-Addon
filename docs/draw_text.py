@@ -479,10 +479,35 @@ def modify_gradient_rectangle(_id:int,func:Callable[[GradientRectangleObject],No
 class StrokedRectangleObject(BaseObject):
 	# noinspection PyMissingConstructor
 	def __init__(self,_id:int):
+		#: X-coordinate of the upper-left corner.
+		self.x:int=0
+		#: Y-coordinate of the upper-left corner.
+		self.y:int=0
+		#: Width of the rectangle.
+		self.width:int
+		#: Height of the rectangle.
+		self.height:int
+		#: Rectangle color. Must be created by the [argb]() function or from the [Colors]() class.
+		self.color:int=0
+		#: Time in seconds that the element will remain on screen. This property cannot be assigned, use :attr:`display_duration_modifier <StrokedRectangleObject.display_duration_modifier>` to change this value.
+		self.display_duration:float
+		#: Modifier to the :attr:`display_duration <StrokedRectangleObject.display_duration>` property.
+		self.display_duration_modifier:float=0
+		#: Layer of the element.
+		self.layer:int=1
 		self.update(_id)
+
+	@property
+	def display_duration(self):
+		return self._display_duration
 
 	# noinspection PyAttributeOutsideInit
 	def update(self,_id:int):
+		"""
+		Updates this StrokedRectangleObject with the values of the rectangle element specified by _id.
+
+		:param _id: ID of the rectangle element.
+		"""
 		info=get_rectangle_object(_id)
 		if (info is None or any(map(lambda x:x is None,info.values()))):
 			return False
@@ -496,15 +521,28 @@ class StrokedRectangleObject(BaseObject):
 		self.layer:int=info["layer"]
 		return True
 
-	@property
-	def display_duration(self):
-		return self._display_duration
+	def to_list(self)->list:
+		"""
+		Returns a list containing all the values of this StrokedRectangleObject.
 
-	def to_list(self):
-		return self.x,self.y,self.width,self.height,self.color,self.display_duration_modifier,self.layer
+		:return: List containing all the values of this StrokedRectangleObject.
+		"""
+		return [self.x,self.y,self.width,self.height,self.color,self.display_duration_modifier,self.layer]
 
 # noinspection PyTypeChecker
 def add_stroked_rectangle(x:int,y:int,w:int,h:int,color:int,display_duration:float,layer:int=1)->int:
+	"""
+	Add a stroked (outline) rectangle element to the screen.
+
+	:param x: X-coordinate of the upper-left corner.
+	:param y: Y-coordinate of the upper-left corner.
+	:param w: Width of the rectangle.
+	:param h: Height of the rectangle.
+	:param color: Rectangle color. Must be created with `argb(...)` or taken from the `Colors` class.
+	:param display_duration: How long the element remains on screen (in seconds).
+	:param layer: Rendering layer of the element. Higher layers appear above lower ones. Default is 1.
+	:return: ID of the created element.
+	"""
 	return (x,y,w,h,color,display_duration,layer)
 
 # noinspection PyTypeChecker
@@ -525,9 +563,21 @@ def _animate_stroked_rectangle(_id:int,func:Callable[[StrokedRectangleObject],No
 			wait_next_frame()
 
 def animate_stroked_rectangle(_id:int,func:Callable[[StrokedRectangleObject],None])->None:
+	"""
+	Animates the stroked rectangle element with the given id by calling the given function every frame with the stroked rectangle element as the argument.
+
+	:param _id: ID of the stroked rectangle element to animate.
+	:param func: Function to use to animate the stroked rectangle element. The function is called every frame with the stroked rectangle element as the argument.
+	"""
 	_animate_stroked_rectangle(_id,func)
 
 def modify_stroked_rectangle(_id:int,func:Callable[[StrokedRectangleObject],None])->None:
+	"""
+	Modifies the stroked rectangle element with the given id by calling the given function once with the stroked rectangle element as the argument.
+
+	:param _id: ID of the stroked rectangle element to modify.
+	:param func: Function to use to modify the stroked rectangle element. The function is called on the closest render frame.
+	"""
 	b=StrokedRectangleObject(_id)
 	if (still_exists(_id)):
 		if (b.update(_id)):
@@ -721,10 +771,33 @@ def modify_text_with_background(_id:int,func:Callable[[TextWithBackgroundObject]
 class ItemObject(BaseObject):
 	# noinspection PyMissingConstructor
 	def __init__(self,_id:int):
+		#: Item to display. Uses the `/give <https://minecraft.wiki/w/Commands/give>`_ command `format <https://minecraft.wiki/w/Argument_types#item_stack>`_.
+		self.item:str=""
+		#: X-coordinate of the item.
+		self.x:int=0
+		#: Y-coordinate of the item.
+		self.y:int=0
+		#: Time in seconds that the element will remain on screen. This property cannot be assigned, use :attr:`display_duration_modifier <ItemObject.display_duration_modifier>` to change this value.
+		self.display_duration:float
+		#: Modifier to the :attr:`display_duration <ItemObject.display_duration>` property.
+		self.display_duration_modifier:float=0
+		#: Layer of the element.
+		self.layer:int=1
+		#: Transformation matrix applied to the element (scale, rotation, translation).
+		self.matrix:Matrix=Matrix()
 		self.update(_id)
+
+	@property
+	def display_duration(self):
+		return self._display_duration
 
 	# noinspection PyAttributeOutsideInit
 	def update(self,_id:int):
+		"""
+		Updates this ItemObject with the values of the item element specified by _id.
+
+		:param _id: ID of the item element.
+		"""
 		info=get_item_object(_id)
 		if (info is None or any(map(lambda x:x is None,info.values()))):
 			return False
@@ -737,19 +810,44 @@ class ItemObject(BaseObject):
 		self.matrix=Matrix.from_dict(info)
 		return True
 
-	@property
-	def display_duration(self):
-		return self._display_duration
+	def to_list(self)->list:
+		"""
+		Returns a list containing all the values of this ItemObject.
 
-	def to_list(self):
-		return self.item,self.x,self.y,self.display_duration_modifier,self.layer,self.matrix
+		:return: List containing all the values of this ItemObject.
+		"""
+		return [self.item,self.x,self.y,self.display_duration_modifier,self.layer,self.matrix]
 
 # noinspection PyTypeChecker
 def add_item(item:str,x:int,y:int,display_duration:float,layer:int=1)->int:
+	"""
+	Add an item element to the screen.
+
+	:param item: Item to display. Uses the `/give <https://minecraft.wiki/w/Commands/give>`_ command `format <https://minecraft.wiki/w/Argument_types#item_stack>`_.
+	:param x: X-coordinate of the text position.
+	:param y: Y-coordinate of the text position.
+	:param display_duration: How long the element remains on screen (in seconds).
+	:param layer: Rendering layer of the element. Higher layers appear above lower ones. Default is 1.
+	:return: ID of the created element.
+	"""
 	return (item,x,y,display_duration,layer)
 
 # noinspection PyTypeChecker
 def add_advanced_item(item:str,x:int,y:int,display_duration:float,layer:int,matrix:Matrix)->int:
+	"""
+	Add an item element to the screen, with additional scaling, rotation, and translation options.
+
+	Advanced version of :func:`add_item` that allows custom transformations.
+
+	:param item: Item to display. Uses the `/give <https://minecraft.wiki/w/Commands/give>`_ command `format <https://minecraft.wiki/w/Argument_types#item_stack>`_.
+	:param x: X-coordinate of the text position.
+	:param y: Y-coordinate of the text position.
+	:param display_duration: How long the element remains on screen (in seconds).
+	:param layer: Rendering layer of the element. Higher layers appear above lower ones. Default is 1.
+	:param matrix: Transformation matrix applied to the element (scale, rotation, translation).
+		See :class:`Matrix`.
+	:return: ID of the created element.
+	"""
 	return (item,x,y,display_duration,layer,*matrix.to_list())
 
 # noinspection PyTypeChecker
@@ -770,9 +868,21 @@ def _animate_item(_id:int,func:Callable[[ItemObject],None])->None:
 			wait_next_frame()
 
 def animate_item(_id:int,func:Callable[[ItemObject],None])->None:
+	"""
+	Animates the item element with the given id by calling the given function every frame with the item element as the argument.
+
+	:param _id: ID of the item element to animate.
+	:param func: Function to use to animate the item element. The function is called every frame with the item element as the argument.
+	"""
 	_animate_item(_id,func)
 
 def modify_item(_id:int,func:Callable[[ItemObject],None])->None:
+	"""
+	Modifies the item element with the given id by calling the given function once with the item element as the argument.
+
+	:param _id: ID of the item element to modify.
+	:param func: Function to use to modify the item element. The function is called on the closest render frame.
+	"""
 	t=ItemObject(_id)
 	if (still_exists(_id)):
 		if (t.update(_id)):

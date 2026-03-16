@@ -9,3 +9,5 @@ API
     text_bg
     rect
     gradient_rect
+    stroked_rect
+    item
