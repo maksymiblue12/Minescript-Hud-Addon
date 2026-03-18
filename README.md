@@ -1,4 +1,4 @@
-# Minescript HUD Addon
+# [Minescript HUD Addon](https://modrinth.com/mod/minescript-hud-addon)
 
 This mod adds the ability to draw custom HUD elements in [Minescript](https://modrinth.com/mod/minescript).
 
