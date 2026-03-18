@@ -824,8 +824,8 @@ def add_item(item:str,x:int,y:int,display_duration:float,layer:int=1)->int:
 	Add an item element to the screen.
 
 	:param item: Item to display. Uses the `/give <https://minecraft.wiki/w/Commands/give>`_ command `format <https://minecraft.wiki/w/Argument_types#item_stack>`_.
-	:param x: X-coordinate of the text position.
-	:param y: Y-coordinate of the text position.
+	:param x: X-coordinate of the item position.
+	:param y: Y-coordinate of the item position.
 	:param display_duration: How long the element remains on screen (in seconds).
 	:param layer: Rendering layer of the element. Higher layers appear above lower ones. Default is 1.
 	:return: ID of the created element.
@@ -840,8 +840,8 @@ def add_advanced_item(item:str,x:int,y:int,display_duration:float,layer:int,matr
 	Advanced version of :func:`add_item` that allows custom transformations.
 
 	:param item: Item to display. Uses the `/give <https://minecraft.wiki/w/Commands/give>`_ command `format <https://minecraft.wiki/w/Argument_types#item_stack>`_.
-	:param x: X-coordinate of the text position.
-	:param y: Y-coordinate of the text position.
+	:param x: X-coordinate of the item position.
+	:param y: Y-coordinate of the item position.
 	:param display_duration: How long the element remains on screen (in seconds).
 	:param layer: Rendering layer of the element. Higher layers appear above lower ones. Default is 1.
 	:param matrix: Transformation matrix applied to the element (scale, rotation, translation).
@@ -896,10 +896,48 @@ def modify_item(_id:int,func:Callable[[ItemObject],None])->None:
 class TextureObject(BaseObject):
 	# noinspection PyMissingConstructor
 	def __init__(self,_id:int):
+		#: Identifier of the texture. See :class:`Identifier` for more information.
+		self.texture:Identifier=Identifier("none",True)
+
+		#: X-coordinate of the texture.
+		self.x:int=0
+
+		#: Y-coordinate of the texture.
+		self.y:int=0
+
+		#: Width of the texture.
+		self.width:int=16
+
+		#: Height of the texture.
+		self.height:int=16
+
+		#: Transparency value of the texture. Use ``alpha_from_int()`` to create.
+		self.alpha=1.0
+
+		#: Time in seconds that the text will remain on screen. This property cannot be assigned, use :attr:`display_duration_modifier <TextureObject.display_duration_modifier>` to change this value.
+		self.display_duration:float
+
+		#: Modifier to the :attr:`display_duration <TextureObject.display_duration>` property.
+		self.display_duration_modifier:float=0
+
+		#: Layer of the element.
+		self.layer:int=1
+
+		#: Transformation matrix applied to the element (scale, rotation, translation).
+		self.matrix:Matrix=Matrix()
 		self.update(_id)
+
+	@property
+	def display_duration(self):
+		return self._display_duration
 
 	# noinspection PyAttributeOutsideInit
 	def update(self,_id:int):
+		"""
+		Updates this TextureObject with the values of the texture element specified by _id.
+
+		:param _id: ID of the texture element.
+		"""
 		info=get_texture_object(_id)
 		if (info is None or any(map(lambda x:x is None,info.values()))):
 			return False
@@ -915,19 +953,54 @@ class TextureObject(BaseObject):
 		self.matrix=Matrix.from_dict(info)
 		return True
 
-	@property
-	def display_duration(self):
-		return self._display_duration
+	def to_list(self)->list:
+		"""
+		Returns a list containing all the values of this TextureObject.
 
-	def to_list(self):
-		return self.texture,self.x,self.y,self.width,self.height,self.alpha,self.display_duration_modifier,self.layer,self.matrix
+		:return: List containing all the values of this TextureObject.
+		"""
+		return [self.texture,self.x,self.y,self.width,self.height,self.alpha,self.display_duration_modifier,self.layer,self.matrix]
 
 # noinspection PyTypeChecker
 def add_texture(texture:Identifier,x:int,y:int,width:int,height:int,alpha:float,display_duration:float,layer:int=1)->int:
+	"""
+	Add a texture element to the screen.
+
+	To add custom textures see :doc:`Adding Custom Textures <../installation>`.
+
+	:param texture: Identifier of the texture. See :class:`Identifier` for more information.
+	:param x: X-coordinate of the texture position.
+	:param y: Y-coordinate of the texture position.
+	:param width: Width of the texture.
+	:param height: Height of the texture
+	:param alpha: Transparency value of the texture. Use ``alpha_from_int()`` to create.
+	:param display_duration: How long the element remains on screen (in seconds).
+	:param layer: Rendering layer of the element. Higher layers appear above lower ones. Default is 1.
+	:return: ID of the created element.
+	"""
 	return (*texture.to_list(),x,y,width,height,alpha,display_duration,layer)
 
 # noinspection PyTypeChecker
 def add_advanced_texture(texture:Identifier,x:int,y:int,width:int,height:int,alpha:float,display_duration:float,layer:int,matrix:Matrix)->int:
+	"""
+	Add a texture element to the screen, with additional scaling, rotation, and translation options.
+
+	To add custom textures see :doc:`Adding Custom Textures <../installation>`.
+
+	Advanced version of :func:`add_texture` that allows custom transformations.
+
+	:param texture: Identifier of the texture. See :class:`Identifier` for more information.
+	:param x: X-coordinate of the texture position.
+	:param y: Y-coordinate of the texture position.
+	:param width: Width of the texture.
+	:param height: Height of the texture
+	:param alpha: Transparency value of the texture. Use ``alpha_from_int()`` to create.
+	:param display_duration: How long the element remains on screen (in seconds).
+	:param layer: Rendering layer of the element. Higher layers appear above lower ones. Default is 1.
+	:param matrix: Transformation matrix applied to the element (scale, rotation, translation).
+		See :class:`Matrix`.
+	:return: ID of the created element.
+	"""
 	return (*texture.to_list(),x,y,width,height,alpha,display_duration,layer,*matrix.to_list())
 
 # noinspection PyTypeChecker
@@ -948,9 +1021,21 @@ def _animate_texture(_id:int,func:Callable[[TextureObject],None])->None:
 			wait_next_frame()
 
 def animate_texture(_id:int,func:Callable[[TextureObject],None])->None:
+	"""
+	Animates the texture element with the given id by calling the given function every frame with the texture element as the argument.
+
+	:param _id: ID of the texture element to animate.
+	:param func: Function to use to animate the texture element. The function is called every frame with the texture element as the argument.
+	"""
 	_animate_texture(_id,func)
 
 def modify_texture(_id:int,func:Callable[[TextureObject],None])->None:
+	"""
+	Modifies the texture element with the given id by calling the given function once with the texture element as the argument.
+
+	:param _id: ID of the texture element to modify.
+	:param func: Function to use to modify the texture element. The function is called on the closest render frame.
+	"""
 	t=TextureObject(_id)
 	if (still_exists(_id)):
 		if (t.update(_id)):

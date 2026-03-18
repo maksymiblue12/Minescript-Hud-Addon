@@ -43,3 +43,5 @@ replay_*.log
 
 libs/
 source/Minescript
+docs/draw_text.py
+docs/make_doc_file.py

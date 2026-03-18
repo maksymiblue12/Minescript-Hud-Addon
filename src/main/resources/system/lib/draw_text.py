@@ -73,12 +73,64 @@ class Identifier:
 
 
 class TextObject(BaseObject):
+	"""
+	This class represents a text element. To create a TextObject object, call the constructor with the id of the text element.
+	"""
 	# noinspection PyMissingConstructor
 	def __init__(self,_id:int):
+		#: Text of the text element.
+		self.text:str=""
+
+		#: X-coordinate of the text.
+		self.x:int=0
+
+		#: Y-coordinate of the text.
+		self.y:int=0
+
+		#: Width of the text. This property cannot be assigned.
+		self.width:int
+
+		#: Height of the text. This property cannot be assigned.
+		self.height:int
+
+		#: Text color. Must be created by the [argb]() function or from the [Colors]() class.
+		self.color:int=0
+
+		#: ``True`` if the text has a shadow ``False`` otherwise.
+		self.shadow:bool=False
+
+		#: Time in seconds that the element will remain on screen. This property cannot be assigned, use :attr:`display_duration_modifier <TextObject.display_duration_modifier>` to change this value.
+		self.display_duration:float
+
+		#: Modifier to the :attr:`display_duration <TextObject.display_duration>` property.
+		self.display_duration_modifier:float=0
+
+		#: Layer of the element.
+		self.layer:int=1
+
+		#: Transformation matrix applied to the element (scale, rotation, translation).
+		self.matrix:Matrix=Matrix()
 		self.update(_id)
+
+	@property
+	def width(self):
+		return self._width
+
+	@property
+	def height(self):
+		return self._height
+
+	@property
+	def display_duration(self):
+		return self._display_duration
 
 	# noinspection PyAttributeOutsideInit
 	def update(self,_id:int):
+		"""
+		Updates this TextObject with the values of the text element specified by _id.
+
+		:param _id: ID of the text element.
+		"""
 		info=get_text_object(_id)
 		if (info is None or any(map(lambda x:x is None,info.values()))):
 			return False
@@ -95,28 +147,50 @@ class TextObject(BaseObject):
 		self._height=info["height"]
 		return True
 
-	@property
-	def width(self):
-		return self._width
+	def to_list(self)->list:
+		"""
+		Returns a list containing all the values of this TextObject.
 
-	@property
-	def height(self):
-		return self._height
+		:return: List containing all the values of this TextObject.
+		"""
+		return [self.text,self.x,self.y,self.color,self.shadow,self.display_duration_modifier,self.layer,self.matrix]
 
-	@property
-	def display_duration(self):
-		return self._display_duration
-
-	def to_list(self):
-		return self.text,self.x,self.y,self.color,self.shadow,self.display_duration_modifier,self.layer,self.matrix
 
 # noinspection PyTypeChecker
 def add_text(text:str,x:int,y:int,color:int,shadow:bool,display_duration:float,layer:int=1)->int:
+	"""
+	Add a text element to the screen.
+
+	:param text: Text to display.
+	:param x: X-coordinate of the text position.
+	:param y: Y-coordinate of the text position.
+	:param color: Text color. Must be created with `argb(...)` or taken from the `Colors` class.
+	:param shadow: Whether the text should be rendered with a shadow.
+	:param display_duration: How long the element remains on screen (in seconds).
+	:param layer: Rendering layer of the element. Higher layers appear above lower ones. Default is 1.
+	:return: ID of the created element.
+	"""
 	return (text,x,y,color,shadow,display_duration,layer)
 add_text=ScriptFunction("add_text",add_text)
 
 # noinspection PyTypeChecker
 def add_advanced_text(text:str,x:int,y:int,color:int,shadow:bool,display_duration:float,layer:int,matrix:Matrix)->int:
+	"""
+	Add a text element to the screen, with additional scaling, rotation, and translation options.
+
+	Advanced version of :func:`add_text` that allows custom transformations.
+
+	:param text: Text to display.
+	:param x: X-coordinate of the text position.
+	:param y: Y-coordinate of the text position.
+	:param color: Text color. Must be created with `argb(...)` or taken from the `Colors` class.
+	:param shadow: Whether the text should be rendered with a shadow.
+	:param display_duration: How long the element remains on screen (in seconds).
+	:param layer: Rendering layer of the element. Higher layers appear above lower ones.
+	:param matrix: Transformation matrix applied to the element (scale, rotation, translation).
+		See :class:`Matrix`.
+	:return: ID of the created element.
+	"""
 	return (text,x,y,color,shadow,display_duration,layer,*matrix.to_list())
 add_advanced_text=ScriptFunction("add_advanced_text",add_advanced_text)
 
@@ -143,9 +217,21 @@ def _animate_text(_id:int,func:Callable[[TextObject], None])->None:
 		wait_next_frame()
 
 def animate_text(_id:int,func:Callable[[TextObject],None])->None:
+	"""
+	Animates the text element with the given id by calling the given function every frame with the text element as the argument.
+
+	:param _id: ID of the text element to animate.
+	:param func: Function to use to animate the text element. The function is called every frame with the text element as the argument.
+	"""
 	_animate_text(_id,func)
 
 def modify_text(_id:int,func:Callable[[TextObject],None])->None:
+	"""
+	Modifies the text element with the given id by calling the given function once with the text element as the argument.
+
+	:param _id: ID of the text element to modify.
+	:param func: Function to use to modify the text element. The function is called on the closest render frame.
+	"""
 	t=TextObject(_id)
 	if (still_exists(_id)):
 		if (t.update(_id)):
@@ -157,12 +243,40 @@ def modify_text(_id:int,func:Callable[[TextObject],None])->None:
 
 
 class RectangleObject(BaseObject):
+	"""
+	This class represents a text element. To create a TextObject object, call the constructor with the id of the text element.
+	"""
 	# noinspection PyMissingConstructor
 	def __init__(self,_id:int):
+		#: X-coordinate of the upper-left corner.
+		self.start_x:int=0
+		#: Y-coordinate of the upper-left corner.
+		self.start_y:int=0
+		#: X-coordinate of the bottom-right corner.
+		self.end_x:int=1
+		#: Y-coordinate of the bottom-right corner.
+		self.end_y:int=1
+		#: Rectangle color. Must be created by the [argb]() function or from the [Colors]() class.
+		self.color:int=0
+		#: Time in seconds that the element will remain on screen. This property cannot be assigned, use :attr:`display_duration_modifier <RectangleObject.display_duration_modifier>` to change this value.
+		self.display_duration:float
+		#: Modifier to the :attr:`display_duration <RectangleObject.display_duration>` property.
+		self.display_duration_modifier:float=0
+		#: Layer of the element.
+		self.layer:int=1
 		self.update(_id)
+
+	@property
+	def display_duration(self):
+		return self._display_duration
 
 	# noinspection PyAttributeOutsideInit
 	def update(self,_id:int):
+		"""
+		Updates this RectangleObject with the values of the rectangle element specified by _id.
+
+		:param _id: ID of the rectangle element.
+		"""
 		info=get_rectangle_object(_id)
 		if (info is None or any(map(lambda x:x is None,info.values()))):
 			return False
@@ -176,20 +290,45 @@ class RectangleObject(BaseObject):
 		self.layer:int=info["layer"]
 		return True
 
-	@property
-	def display_duration(self):
-		return self._display_duration
+	def to_list(self)->list:
+		"""
+		Returns a list containing all the values of this RectangleObject.
 
-	def to_list(self):
-		return self.start_x,self.start_y,self.end_x,self.end_y,self.color,self.display_duration_modifier,self.layer
+		:return: List containing all the values of this RectangleObject.
+		"""
+		return [self.start_x,self.start_y,self.end_x,self.end_y,self.color,self.display_duration_modifier,self.layer]
 
 # noinspection PyTypeChecker
 def add_rectangle(sx:int,sy:int,w:int,h:int,color:int,display_duration:float,layer:int=1)->int:
+	"""
+	Add a rectangle element to the screen.
+
+	:param sx: X-coordinate of the upper-left corner.
+	:param sy: Y-coordinate of the upper-left corner.
+	:param w: Width of the rectangle.
+	:param h: Height of the rectangle.
+	:param color: Rectangle color. Must be created with `argb(...)` or taken from the `Colors` class.
+	:param display_duration: How long the element remains on screen (in seconds).
+	:param layer: Rendering layer of the element. Higher layers appear above lower ones. Default is 1.
+	:return: ID of the created element.
+	"""
 	return (sx,sy,sx+w,sy+h,color,display_duration,layer)
 add_rectangle=ScriptFunction("add_rectangle",add_rectangle)
 
 # noinspection PyTypeChecker
 def add_rectangle_from_corners(sx:int,sy:int,ex:int,ey:int,color:int,display_duration:float,layer:int=1)->int:
+	"""
+	Add a rectangle element to the screen.
+
+	:param sx: X-coordinate of the upper-left corner.
+	:param sy: Y-coordinate of the upper-left corner.
+	:param ex: X-coordinate of the bottom-right corner.
+	:param ey: Y-coordinate of the bottom-right corner.
+	:param color: Rectangle color. Must be created with `argb(...)` or taken from the `Colors` class.
+	:param display_duration: How long the element remains on screen (in seconds).
+	:param layer: Rendering layer of the element. Higher layers appear above lower ones. Default is 1.
+	:return: ID of the created element.
+	"""
 	return (sx,sy,ex,ey,color,display_duration,layer)
 add_rectangle_from_corners=ScriptFunction("add_rectangle_from_corners",add_rectangle_from_corners)
 
@@ -213,9 +352,21 @@ def _animate_rectangle(_id:int,func:Callable[[RectangleObject],None])->None:
 			wait_next_frame()
 
 def animate_rectangle(_id:int,func:Callable[[RectangleObject],None])->None:
+	"""
+	Animates the rectangle element with the given id by calling the given function every frame with the rectangle element as the argument.
+
+	:param _id: ID of the rectangle element to animate.
+	:param func: Function to use to animate the rectangle element. The function is called every frame with the rectangle element as the argument.
+	"""
 	_animate_rectangle(_id,func)
 
 def modify_rectangle(_id:int,func:Callable[[RectangleObject],None])->None:
+	"""
+	Modifies the rectangle element with the given id by calling the given function once with the rectangle element as the argument.
+
+	:param _id: ID of the rectangle element to modify.
+	:param func: Function to use to modify the rectangle element. The function is called on the closest render frame.
+	"""
 	b=RectangleObject(_id)
 	if (still_exists(_id)):
 		if (b.update(_id)):
@@ -225,10 +376,37 @@ def modify_rectangle(_id:int,func:Callable[[RectangleObject],None])->None:
 class GradientRectangleObject(BaseObject):
 	# noinspection PyMissingConstructor
 	def __init__(self,_id:int):
+		#: X-coordinate of the upper-left corner.
+		self.start_x:int=0
+		#: Y-coordinate of the upper-left corner.
+		self.start_y:int=0
+		#: X-coordinate of the bottom-right corner.
+		self.end_x:int=1
+		#: Y-coordinate of the bottom-right corner.
+		self.end_y:int=1
+		#: Color at the top of the rectangle. Must be created by the [argb]() function or from the [Colors]() class.
+		self.start_color:int=0
+		#: Color at the bottom of the rectangle. Must be created by the [argb]() function or from the [Colors]() class.
+		self.end_color:int=0
+		#: Time in seconds that the element will remain on screen. This property cannot be assigned, use :attr:`display_duration_modifier <RectangleObject.display_duration_modifier>` to change this value.
+		self.display_duration:float
+		#: Modifier to the :attr:`display_duration <RectangleObject.display_duration>` property.
+		self.display_duration_modifier:float=0
+		#: Layer of the element.
+		self.layer:int=1
 		self.update(_id)
+
+	@property
+	def display_duration(self):
+		return self._display_duration
 
 	# noinspection PyAttributeOutsideInit
 	def update(self,_id:int):
+		"""
+		Updates this GradientRectangleObject with the values of the gradient rectangle element specified by _id.
+
+		:param _id: ID of the gradient rectangle element.
+		"""
 		info=get_rectangle_object(_id)
 		if (info is None or any(map(lambda x:x is None,info.values()))):
 			return False
@@ -243,15 +421,29 @@ class GradientRectangleObject(BaseObject):
 		self.layer:int=info["layer"]
 		return True
 
-	@property
-	def display_duration(self):
-		return self._display_duration
+	def to_list(self)->list:
+		"""
+		Returns a list containing all the values of this GradientRectangleObject.
 
-	def to_list(self):
-		return self.start_x,self.start_y,self.end_x,self.end_y,self.start_color,self.end_color,self.display_duration_modifier,self.layer
+		:return: List containing all the values of this GradientRectangleObject.
+		"""
+		return [self.start_x,self.start_y,self.end_x,self.end_y,self.start_color,self.end_color,self.display_duration_modifier,self.layer]
 
 # noinspection PyTypeChecker
 def add_gradient_rectangle(sx:int,sy:int,w:int,h:int,start_color:int,end_color:int,display_duration:float,layer:int=1)->int:
+	"""
+	Add a gradient rectangle element to the screen.
+
+	:param sx: X-coordinate of the upper-left corner.
+	:param sy: Y-coordinate of the upper-left corner.
+	:param w: Width of the rectangle.
+	:param h: Height of the rectangle.
+	:param start_color: Color at the top of the rectangle. Must be created by the [argb]() function or from the [Colors]() class.
+	:param end_color: Color at the bottom of the rectangle. Must be created by the [argb]() function or from the [Colors]() class.
+	:param display_duration: How long the element remains on screen (in seconds).
+	:param layer: Rendering layer of the element. Higher layers appear above lower ones. Default is 1.
+	:return: ID of the created element.
+	"""
 	return (sx,sy,sx+w,sy+h,start_color,end_color,display_duration,layer)
 add_gradient_rectangle=ScriptFunction("add_gradient_rectangle",add_gradient_rectangle)
 
@@ -275,9 +467,21 @@ def _animate_gradient_rectangle(_id:int,func:Callable[[GradientRectangleObject],
 			wait_next_frame()
 
 def animate_gradient_rectangle(_id:int,func:Callable[[GradientRectangleObject],None])->None:
+	"""
+	Animates the gradient rectangle element with the given id by calling the given function every frame with the gradient rectangle element as the argument.
+
+	:param _id: ID of the gradient rectangle element to animate.
+	:param func: Function to use to animate the gradient rectangle element. The function is called every frame with the gradient rectangle element as the argument.
+	"""
 	_animate_gradient_rectangle(_id,func)
 
 def modify_gradient_rectangle(_id:int,func:Callable[[GradientRectangleObject],None])->None:
+	"""
+	Modifies the gradient rectangle element with the given id by calling the given function once with the gradient rectangle element as the argument.
+
+	:param _id: ID of the gradient rectangle element to modify.
+	:param func: Function to use to modify the gradient rectangle element. The function is called on the closest render frame.
+	"""
 	b=GradientRectangleObject(_id)
 	if (still_exists(_id)):
 		if (b.update(_id)):
@@ -287,10 +491,35 @@ def modify_gradient_rectangle(_id:int,func:Callable[[GradientRectangleObject],No
 class StrokedRectangleObject(BaseObject):
 	# noinspection PyMissingConstructor
 	def __init__(self,_id:int):
+		#: X-coordinate of the upper-left corner.
+		self.x:int=0
+		#: Y-coordinate of the upper-left corner.
+		self.y:int=0
+		#: Width of the rectangle.
+		self.width:int
+		#: Height of the rectangle.
+		self.height:int
+		#: Rectangle color. Must be created by the [argb]() function or from the [Colors]() class.
+		self.color:int=0
+		#: Time in seconds that the element will remain on screen. This property cannot be assigned, use :attr:`display_duration_modifier <StrokedRectangleObject.display_duration_modifier>` to change this value.
+		self.display_duration:float
+		#: Modifier to the :attr:`display_duration <StrokedRectangleObject.display_duration>` property.
+		self.display_duration_modifier:float=0
+		#: Layer of the element.
+		self.layer:int=1
 		self.update(_id)
+
+	@property
+	def display_duration(self):
+		return self._display_duration
 
 	# noinspection PyAttributeOutsideInit
 	def update(self,_id:int):
+		"""
+		Updates this StrokedRectangleObject with the values of the rectangle element specified by _id.
+
+		:param _id: ID of the rectangle element.
+		"""
 		info=get_rectangle_object(_id)
 		if (info is None or any(map(lambda x:x is None,info.values()))):
 			return False
@@ -304,15 +533,28 @@ class StrokedRectangleObject(BaseObject):
 		self.layer:int=info["layer"]
 		return True
 
-	@property
-	def display_duration(self):
-		return self._display_duration
+	def to_list(self)->list:
+		"""
+		Returns a list containing all the values of this StrokedRectangleObject.
 
-	def to_list(self):
-		return self.x,self.y,self.width,self.height,self.color,self.display_duration_modifier,self.layer
+		:return: List containing all the values of this StrokedRectangleObject.
+		"""
+		return [self.x,self.y,self.width,self.height,self.color,self.display_duration_modifier,self.layer]
 
 # noinspection PyTypeChecker
 def add_stroked_rectangle(x:int,y:int,w:int,h:int,color:int,display_duration:float,layer:int=1)->int:
+	"""
+	Add a stroked (outline) rectangle element to the screen.
+
+	:param x: X-coordinate of the upper-left corner.
+	:param y: Y-coordinate of the upper-left corner.
+	:param w: Width of the rectangle.
+	:param h: Height of the rectangle.
+	:param color: Rectangle color. Must be created with `argb(...)` or taken from the `Colors` class.
+	:param display_duration: How long the element remains on screen (in seconds).
+	:param layer: Rendering layer of the element. Higher layers appear above lower ones. Default is 1.
+	:return: ID of the created element.
+	"""
 	return (x,y,w,h,color,display_duration,layer)
 add_stroked_rectangle=ScriptFunction("add_stroked_rectangle",add_stroked_rectangle)
 
@@ -336,9 +578,21 @@ def _animate_stroked_rectangle(_id:int,func:Callable[[StrokedRectangleObject],No
 			wait_next_frame()
 
 def animate_stroked_rectangle(_id:int,func:Callable[[StrokedRectangleObject],None])->None:
+	"""
+	Animates the stroked rectangle element with the given id by calling the given function every frame with the stroked rectangle element as the argument.
+
+	:param _id: ID of the stroked rectangle element to animate.
+	:param func: Function to use to animate the stroked rectangle element. The function is called every frame with the stroked rectangle element as the argument.
+	"""
 	_animate_stroked_rectangle(_id,func)
 
 def modify_stroked_rectangle(_id:int,func:Callable[[StrokedRectangleObject],None])->None:
+	"""
+	Modifies the stroked rectangle element with the given id by calling the given function once with the stroked rectangle element as the argument.
+
+	:param _id: ID of the stroked rectangle element to modify.
+	:param func: Function to use to modify the stroked rectangle element. The function is called on the closest render frame.
+	"""
 	b=StrokedRectangleObject(_id)
 	if (still_exists(_id)):
 		if (b.update(_id)):
@@ -350,12 +604,73 @@ def modify_stroked_rectangle(_id:int,func:Callable[[StrokedRectangleObject],None
 
 
 class TextWithBackgroundObject(BaseObject):
+	"""
+	This class represents a text with background element. To create a TextWithBackgroundObject object, call the constructor with the id of the text with background element.
+	"""
 	# noinspection PyMissingConstructor
 	def __init__(self,_id:int):
+		#: Text of the text element.
+		self.text:str=""
+
+		#: X-coordinate of the text.
+		self.x:int=0
+
+		#: Y-coordinate of the text.
+		self.y:int=0
+
+		#: Width of the text. This property cannot be assigned.
+		self.width:int
+
+		#: Height of the text. This property cannot be assigned.
+		self.height:int
+
+		#: Horizontal padding between the text and the background box.
+		self.margin_x:int=0
+
+		#: Vertical padding between the text and the background box.
+		self.margin_y:int=0
+
+		#: Text color. Must be created by the [argb]() function or from the [Colors]() class.
+		self.color:int=0
+
+		#: Background color. Must be created with `argb(...)` or taken from the `Colors` class.
+		self.bg_color:int=0
+
+		#: ``True`` if the text has a shadow ``False`` otherwise.
+		self.shadow:bool=False
+
+		#: Time in seconds that the text will remain on screen. This property cannot be assigned, use :attr:`display_duration_modifier <TextWithBackgroundObject.display_duration_modifier>` to change this value.
+		self.display_duration:float
+
+		#: Modifier to the :attr:`display_duration <TextWithBackgroundObject.display_duration>` property.
+		self.display_duration_modifier:float=0
+
+		#: Layer of the element.
+		self.layer:int=1
+
+		#: Transformation matrix applied to the element (scale, rotation, translation).
+		self.matrix:Matrix=Matrix()
 		self.update(_id)
+
+	@property
+	def width(self):
+		return self._width
+
+	@property
+	def height(self):
+		return self._height
+
+	@property
+	def display_duration(self):
+		return self._display_duration
 
 	# noinspection PyAttributeOutsideInit
 	def update(self,_id:int):
+		"""
+		Updates this TextObject with the values of the text element specified by _id.
+
+		:param _id: ID of the text element.
+		"""
 		info=get_text_with_background_object(_id)
 		if (info is None or any(map(lambda x:x is None,info.values()))):
 			return False
@@ -375,28 +690,55 @@ class TextWithBackgroundObject(BaseObject):
 		self._height=info["height"]
 		return True
 
-	@property
-	def width(self):
-		return self._width
+	def to_list(self)->list:
+		"""
+		Returns a list containing all the values of this TextWithBackgroundObject.
 
-	@property
-	def height(self):
-		return self._height
-
-	@property
-	def display_duration(self):
-		return self._display_duration
-
-	def to_list(self):
-		return self.text,self.x,self.y,self.margin_x,self.margin_y,self.color,self.bg_color,self.shadow,self.display_duration_modifier,self.layer,self.matrix
+		:return: List containing all the values of this TextWithBackgroundObject.
+		"""
+		return [self.text,self.x,self.y,self.margin_x,self.margin_y,self.color,self.bg_color,self.shadow,self.display_duration_modifier,self.layer,self.matrix]
 
 # noinspection PyTypeChecker
 def add_text_with_background(text:str,x:int,y:int,margin_x:int,margin_y:int,color:int,bg_color:int,shadow:bool,display_duration:float,layer:int=1)->int:
+	"""
+	Add a text element with a background to the screen.
+
+	:param text: Text to display.
+	:param x: X-coordinate of the text position.
+	:param y: Y-coordinate of the text position.
+	:param margin_x: Horizontal padding between the text and the background box.
+	:param margin_y: Vertical padding between the text and the background box.
+	:param color: Text color. Must be created with `argb(...)` or taken from the `Colors` class.
+	:param bg_color: Background color. Must be created with `argb(...)` or taken from the `Colors` class.
+	:param shadow: Whether the text should be rendered with a shadow.
+	:param display_duration: How long the element remains on screen (in seconds).
+	:param layer: Rendering layer of the element. Higher layers appear above lower ones. Default is 1.
+	:return: ID of the created element.
+	"""
 	return (text,x,y,margin_x,margin_y,color,bg_color,shadow,display_duration,layer)
 add_text_with_background=ScriptFunction("add_text_with_background",add_text_with_background)
 
 # noinspection PyTypeChecker
 def add_advanced_text_with_background(text:str,x:int,y:int,margin_x:int,margin_y:int,color:int,bg_color:int,shadow:bool,display_duration:float,layer:int,matrix:Matrix)->int:
+	"""
+	Add a text element with a background to the screen, with additional scaling, rotation, and translation options.
+
+	Advanced version of :func:`add_text_with_background` that allows custom transformations.
+
+	:param text: Text to display.
+	:param x: X-coordinate of the text position.
+	:param y: Y-coordinate of the text position.
+	:param margin_x: Horizontal padding between the text and the background box.
+	:param margin_y: Vertical padding between the text and the background box.
+	:param color: Text color. Must be created with `argb(...)` or taken from the `Colors` class.
+	:param bg_color: Background color. Must be created with `argb(...)` or taken from the `Colors` class.
+	:param shadow: Whether the text should be rendered with a shadow.
+	:param display_duration: How long the element remains on screen (in seconds).
+	:param layer: Rendering layer of the element. Higher layers appear above lower ones.
+	:param matrix: Transformation matrix applied to the element (scale, rotation, translation).
+		See :class:`Matrix`.
+	:return: ID of the created element.
+	"""
 	return (text,x,y,margin_x,margin_y,color,bg_color,shadow,display_duration,layer,*matrix.to_list())
 add_advanced_text_with_background=ScriptFunction("add_advanced_text_with_background",add_advanced_text_with_background)
 
@@ -420,9 +762,21 @@ def _animate_text_with_background(_id:int,func:Callable[[TextWithBackgroundObjec
 			wait_next_frame()
 
 def animate_text_with_background(_id:int,func:Callable[[TextWithBackgroundObject],None])->None:
+	"""
+	Animates the text with background element with the given id by calling the given function every frame with the text with background element as the argument.
+
+	:param _id: ID of the text element to animate.
+	:param func: Function to use to animate the text element. The function is called every frame with the text with background element as the argument.
+	"""
 	_animate_text_with_background(_id,func)
 
 def modify_text_with_background(_id:int,func:Callable[[TextWithBackgroundObject],None])->None:
+	"""
+	Modifies the text with background element with the given id by calling the given function once with the text with background element as the argument.
+
+	:param _id: ID of the text element to modify.
+	:param func: Function to use to modify the text element. The function is called on the closest render frame.
+	"""
 	t=TextWithBackgroundObject(_id)
 	if (still_exists(_id)):
 		if (t.update(_id)):
@@ -436,10 +790,33 @@ def modify_text_with_background(_id:int,func:Callable[[TextWithBackgroundObject]
 class ItemObject(BaseObject):
 	# noinspection PyMissingConstructor
 	def __init__(self,_id:int):
+		#: Item to display. Uses the `/give <https://minecraft.wiki/w/Commands/give>`_ command `format <https://minecraft.wiki/w/Argument_types#item_stack>`_.
+		self.item:str=""
+		#: X-coordinate of the item.
+		self.x:int=0
+		#: Y-coordinate of the item.
+		self.y:int=0
+		#: Time in seconds that the element will remain on screen. This property cannot be assigned, use :attr:`display_duration_modifier <ItemObject.display_duration_modifier>` to change this value.
+		self.display_duration:float
+		#: Modifier to the :attr:`display_duration <ItemObject.display_duration>` property.
+		self.display_duration_modifier:float=0
+		#: Layer of the element.
+		self.layer:int=1
+		#: Transformation matrix applied to the element (scale, rotation, translation).
+		self.matrix:Matrix=Matrix()
 		self.update(_id)
+
+	@property
+	def display_duration(self):
+		return self._display_duration
 
 	# noinspection PyAttributeOutsideInit
 	def update(self,_id:int):
+		"""
+		Updates this ItemObject with the values of the item element specified by _id.
+
+		:param _id: ID of the item element.
+		"""
 		info=get_item_object(_id)
 		if (info is None or any(map(lambda x:x is None,info.values()))):
 			return False
@@ -452,20 +829,45 @@ class ItemObject(BaseObject):
 		self.matrix=Matrix.from_dict(info)
 		return True
 
-	@property
-	def display_duration(self):
-		return self._display_duration
+	def to_list(self)->list:
+		"""
+		Returns a list containing all the values of this ItemObject.
 
-	def to_list(self):
-		return self.item,self.x,self.y,self.display_duration_modifier,self.layer,self.matrix
+		:return: List containing all the values of this ItemObject.
+		"""
+		return [self.item,self.x,self.y,self.display_duration_modifier,self.layer,self.matrix]
 
 # noinspection PyTypeChecker
 def add_item(item:str,x:int,y:int,display_duration:float,layer:int=1)->int:
+	"""
+	Add an item element to the screen.
+
+	:param item: Item to display. Uses the `/give <https://minecraft.wiki/w/Commands/give>`_ command `format <https://minecraft.wiki/w/Argument_types#item_stack>`_.
+	:param x: X-coordinate of the item position.
+	:param y: Y-coordinate of the item position.
+	:param display_duration: How long the element remains on screen (in seconds).
+	:param layer: Rendering layer of the element. Higher layers appear above lower ones. Default is 1.
+	:return: ID of the created element.
+	"""
 	return (item,x,y,display_duration,layer)
 add_item=ScriptFunction("add_item",add_item)
 
 # noinspection PyTypeChecker
 def add_advanced_item(item:str,x:int,y:int,display_duration:float,layer:int,matrix:Matrix)->int:
+	"""
+	Add an item element to the screen, with additional scaling, rotation, and translation options.
+
+	Advanced version of :func:`add_item` that allows custom transformations.
+
+	:param item: Item to display. Uses the `/give <https://minecraft.wiki/w/Commands/give>`_ command `format <https://minecraft.wiki/w/Argument_types#item_stack>`_.
+	:param x: X-coordinate of the item position.
+	:param y: Y-coordinate of the item position.
+	:param display_duration: How long the element remains on screen (in seconds).
+	:param layer: Rendering layer of the element. Higher layers appear above lower ones. Default is 1.
+	:param matrix: Transformation matrix applied to the element (scale, rotation, translation).
+		See :class:`Matrix`.
+	:return: ID of the created element.
+	"""
 	return (item,x,y,display_duration,layer,*matrix.to_list())
 add_advanced_item=ScriptFunction("add_advanced_item",add_advanced_item)
 
@@ -489,9 +891,21 @@ def _animate_item(_id:int,func:Callable[[ItemObject],None])->None:
 			wait_next_frame()
 
 def animate_item(_id:int,func:Callable[[ItemObject],None])->None:
+	"""
+	Animates the item element with the given id by calling the given function every frame with the item element as the argument.
+
+	:param _id: ID of the item element to animate.
+	:param func: Function to use to animate the item element. The function is called every frame with the item element as the argument.
+	"""
 	_animate_item(_id,func)
 
 def modify_item(_id:int,func:Callable[[ItemObject],None])->None:
+	"""
+	Modifies the item element with the given id by calling the given function once with the item element as the argument.
+
+	:param _id: ID of the item element to modify.
+	:param func: Function to use to modify the item element. The function is called on the closest render frame.
+	"""
 	t=ItemObject(_id)
 	if (still_exists(_id)):
 		if (t.update(_id)):
@@ -505,10 +919,48 @@ def modify_item(_id:int,func:Callable[[ItemObject],None])->None:
 class TextureObject(BaseObject):
 	# noinspection PyMissingConstructor
 	def __init__(self,_id:int):
+		#: Identifier of the texture. See :class:`Identifier` for more information.
+		self.texture:Identifier=Identifier("none",True)
+
+		#: X-coordinate of the texture.
+		self.x:int=0
+
+		#: Y-coordinate of the texture.
+		self.y:int=0
+
+		#: Width of the texture.
+		self.width:int=16
+
+		#: Height of the texture.
+		self.height:int=16
+
+		#: Transparency value of the texture. Use ``alpha_from_int()`` to create.
+		self.alpha=1.0
+
+		#: Time in seconds that the text will remain on screen. This property cannot be assigned, use :attr:`display_duration_modifier <TextureObject.display_duration_modifier>` to change this value.
+		self.display_duration:float
+
+		#: Modifier to the :attr:`display_duration <TextureObject.display_duration>` property.
+		self.display_duration_modifier:float=0
+
+		#: Layer of the element.
+		self.layer:int=1
+
+		#: Transformation matrix applied to the element (scale, rotation, translation).
+		self.matrix:Matrix=Matrix()
 		self.update(_id)
+
+	@property
+	def display_duration(self):
+		return self._display_duration
 
 	# noinspection PyAttributeOutsideInit
 	def update(self,_id:int):
+		"""
+		Updates this TextureObject with the values of the texture element specified by _id.
+
+		:param _id: ID of the texture element.
+		"""
 		info=get_texture_object(_id)
 		if (info is None or any(map(lambda x:x is None,info.values()))):
 			return False
@@ -524,20 +976,55 @@ class TextureObject(BaseObject):
 		self.matrix=Matrix.from_dict(info)
 		return True
 
-	@property
-	def display_duration(self):
-		return self._display_duration
+	def to_list(self)->list:
+		"""
+		Returns a list containing all the values of this TextureObject.
 
-	def to_list(self):
-		return self.texture,self.x,self.y,self.width,self.height,self.alpha,self.display_duration_modifier,self.layer,self.matrix
+		:return: List containing all the values of this TextureObject.
+		"""
+		return [self.texture,self.x,self.y,self.width,self.height,self.alpha,self.display_duration_modifier,self.layer,self.matrix]
 
 # noinspection PyTypeChecker
 def add_texture(texture:Identifier,x:int,y:int,width:int,height:int,alpha:float,display_duration:float,layer:int=1)->int:
+	"""
+	Add a texture element to the screen.
+
+	To add custom textures see :doc:`Adding Custom Textures <../installation>`.
+
+	:param texture: Identifier of the texture. See :class:`Identifier` for more information.
+	:param x: X-coordinate of the texture position.
+	:param y: Y-coordinate of the texture position.
+	:param width: Width of the texture.
+	:param height: Height of the texture
+	:param alpha: Transparency value of the texture. Use ``alpha_from_int()`` to create.
+	:param display_duration: How long the element remains on screen (in seconds).
+	:param layer: Rendering layer of the element. Higher layers appear above lower ones. Default is 1.
+	:return: ID of the created element.
+	"""
 	return (*texture.to_list(),x,y,width,height,alpha,display_duration,layer)
 add_texture=ScriptFunction("add_texture",add_texture)
 
 # noinspection PyTypeChecker
 def add_advanced_texture(texture:Identifier,x:int,y:int,width:int,height:int,alpha:float,display_duration:float,layer:int,matrix:Matrix)->int:
+	"""
+	Add a texture element to the screen, with additional scaling, rotation, and translation options.
+
+	To add custom textures see :doc:`Adding Custom Textures <../installation>`.
+
+	Advanced version of :func:`add_texture` that allows custom transformations.
+
+	:param texture: Identifier of the texture. See :class:`Identifier` for more information.
+	:param x: X-coordinate of the texture position.
+	:param y: Y-coordinate of the texture position.
+	:param width: Width of the texture.
+	:param height: Height of the texture
+	:param alpha: Transparency value of the texture. Use ``alpha_from_int()`` to create.
+	:param display_duration: How long the element remains on screen (in seconds).
+	:param layer: Rendering layer of the element. Higher layers appear above lower ones. Default is 1.
+	:param matrix: Transformation matrix applied to the element (scale, rotation, translation).
+		See :class:`Matrix`.
+	:return: ID of the created element.
+	"""
 	return (*texture.to_list(),x,y,width,height,alpha,display_duration,layer,*matrix.to_list())
 add_advanced_texture=ScriptFunction("add_advanced_texture",add_advanced_texture)
 
@@ -561,9 +1048,21 @@ def _animate_texture(_id:int,func:Callable[[TextureObject],None])->None:
 			wait_next_frame()
 
 def animate_texture(_id:int,func:Callable[[TextureObject],None])->None:
+	"""
+	Animates the texture element with the given id by calling the given function every frame with the texture element as the argument.
+
+	:param _id: ID of the texture element to animate.
+	:param func: Function to use to animate the texture element. The function is called every frame with the texture element as the argument.
+	"""
 	_animate_texture(_id,func)
 
 def modify_texture(_id:int,func:Callable[[TextureObject],None])->None:
+	"""
+	Modifies the texture element with the given id by calling the given function once with the texture element as the argument.
+
+	:param _id: ID of the texture element to modify.
+	:param func: Function to use to modify the texture element. The function is called on the closest render frame.
+	"""
 	t=TextureObject(_id)
 	if (still_exists(_id)):
 		if (t.update(_id)):

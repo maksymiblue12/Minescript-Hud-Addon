@@ -11,3 +11,4 @@ API
     gradient_rect
     stroked_rect
     item
+    texture
