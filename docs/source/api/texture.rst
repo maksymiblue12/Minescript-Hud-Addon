@@ -34,7 +34,7 @@ Example
     add_texture(Identifier("hud/heart/hardcore_full", vanilla=True), x=10, y=16, width=9, height=9, alpha=alpha_from_int(255), display_duration=5)
 
     # Uses custom texture `red_rectangle.png` added by a resource pack in the `assets/minescripthud/textures/gui/sprites/` folder.
-    add_texture(Identifier("rec_rectangle", vanilla=False), x=10, y=32, width=10, height=10, alpha=alpha_from_int(255), display_duration=5)
+    add_texture(Identifier("red_rectangle", vanilla=False), x=10, y=32, width=10, height=10, alpha=alpha_from_int(255), display_duration=5)
 
     # Supports animated textures
     add_texture(Identifier("icon/music_notes", vanilla=True), x=10, y=48, width=16, height=16, alpha=alpha_from_int(255), display_duration=5)
