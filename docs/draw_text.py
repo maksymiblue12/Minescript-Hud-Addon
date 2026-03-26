@@ -966,7 +966,7 @@ def add_texture(texture:Identifier,x:int,y:int,width:int,height:int,alpha:float,
 	"""
 	Add a texture element to the screen.
 
-	To add custom textures see :doc:`Adding Custom Textures <../installation>`.
+	To add custom textures see :doc:`Adding Custom Textures <../custom_textures>`.
 
 	:param texture: Identifier of the texture. See :class:`Identifier` for more information.
 	:param x: X-coordinate of the texture position.
@@ -985,7 +985,7 @@ def add_advanced_texture(texture:Identifier,x:int,y:int,width:int,height:int,alp
 	"""
 	Add a texture element to the screen, with additional scaling, rotation, and translation options.
 
-	To add custom textures see :doc:`Adding Custom Textures <../installation>`.
+	To add custom textures see :doc:`Adding Custom Textures <../custom_textures>`.
 
 	Advanced version of :func:`add_texture` that allows custom transformations.
 
@@ -1070,11 +1070,26 @@ def rainbow_animation_with_speed(step:int)->Callable[[BaseObject,int],None]:
 	return lambda t:rainbow_animation(t,step)
 
 def alpha_from_int(alpha:int)->float:
+	"""
+	Converts an alpha value ranging from 0 to 255 (inclusive) to an integer.
+
+	:param alpha: Alpha value to convert.
+	:return: Integer representing alpha.
+	"""
 	if (alpha<0 or alpha>255):
 		raise ValueError("Alpha must be between 0 and 255!")
 	return alpha/255
 
 def argb(a:int,r:int,g:int,b:int)->int:
+	"""
+	Converts a, r, g, b values into a minecraft color. Values must be between 0 and 255 (inclusive).
+
+	:param a: Alpha value of the color.
+	:param r: Red value of the color.
+	:param g: Green value of the color.
+	:param b: Blue value of the color.
+	:return: Minecraft color with the a, r, g, b values.
+	"""
 	if (a>255 or a<0 or r>255 or r<0 or g>255 or g<0 or b>255 or b<0):
 		raise ValueError(f"a,r,g,b values must be between 0 and 255!")
 	value=(a<<24)|(r<<16)|(g<<8)|b
@@ -1083,6 +1098,12 @@ def argb(a:int,r:int,g:int,b:int)->int:
 	return value
 
 def argb_to_int(color:int)->tuple[int,int,int,int]:
+	"""
+	Converts an ARGB minecraft color into it's a, r, g, b values.
+
+	:param color: Color to convert.
+	:return: A, r, g, b values of the color.
+	"""
 	a=(color>>24)&0xFF
 	r=(color>>16)&0xFF
 	g=(color>>8)&0xFF
@@ -1090,9 +1111,21 @@ def argb_to_int(color:int)->tuple[int,int,int,int]:
 	return (a,r,g,b)
 
 def remove_element(_id:int):
+	"""
+	Removes the element with the given id.
+
+	:param _id: ID of the element to remove.
+	"""
 	return (_id,)
 
-def still_exists(_id:int):
+# noinspection PyTypeChecker
+def still_exists(_id:int)->bool:
+	"""
+	Returns ``True`` if the element with the given id exists, ``False`` otherwise.
+
+	:param _id: ID of the element to check.
+	:return: ``True`` if the element exists, ``False`` otherwise.
+	"""
 	return (_id,)
 
 def _get_mouse():
@@ -1101,14 +1134,26 @@ def _get_mouse():
 def get_mouse():
 	return MouseObject(_get_mouse())
 
-def get_font_height():
+# noinspection PyTypeChecker
+def get_font_height()->int:
+	"""
+	Returns the text font height.
+
+	:return: Font height.
+	"""
 	return ()
 
 def clear():
+	"""
+	Removes all elements.
+	"""
 	return ()
 
 def wait_next_frame():
 	return ()
 
 def suppress_done_message():
+	"""
+	Removes the ``Done`` message that appears after a script finishes.
+	"""
 	return ()

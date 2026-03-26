@@ -12,3 +12,4 @@ API
     stroked_rect
     item
     texture
+    util

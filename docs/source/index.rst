@@ -9,6 +9,8 @@ Minescript HUD Addon documentation
 .. warning::
    This wiki is still under development!
 
+   If you find anything unclear, please create an `issue <https://github.com/maksymiblue12/Minescript-Hud-Addon/issues>`_ on github.
+
 | **Minescript HUD Addon** is a Minecraft mod that enables scripts to render custom elements on the Minecraft HUD.
 | It extends `Minescript <https://modrinth.com/mod/minescript>`_ by providing additional functions for drawing **text**, **rectangles**, **items** and even **custom textures** directly on the screen.
 |
@@ -24,5 +26,6 @@ Contents
 
    self
    installation
+   custom_textures
    api/index.rst
 
