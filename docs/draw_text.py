@@ -50,7 +50,7 @@ class Matrix:
 		self._rotate=0
 		self._translation=[0,0]
 
-	def scale(self,x,y=None)->Matrix:
+	def scale(self,x,y=None):
 		"""
 		Applies scaling to the matrix.
 
@@ -62,7 +62,7 @@ class Matrix:
 		self._scale=[self._scale[0]*x,self._scale[1]*y]
 		return self
 
-	def rotate(self,radians)->Matrix:
+	def rotate(self,radians):
 		"""
 		Applies rotation to the matrix.
 
@@ -72,7 +72,7 @@ class Matrix:
 		self._rotate+=radians
 		return self
 
-	def translate(self,x,y)->Matrix:
+	def translate(self,x,y):
 		"""
 		Applies translation to the matrix.
 
