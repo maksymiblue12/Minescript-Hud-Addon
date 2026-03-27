@@ -3,6 +3,9 @@
 Stroked Rectangle
 =================
 
+.. warning::
+    Only in versions 1.21.10 and up!
+
 .. autofunction:: add_stroked_rectangle
 .. autofunction:: animate_stroked_rectangle
 .. autofunction:: modify_stroked_rectangle

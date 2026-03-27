@@ -4,44 +4,93 @@ from collections.abc import Callable
 
 
 class Colors:
+	"""
+	Collection of built-in minecraft colors.
+	"""
+	#: White color.
 	WHITE=-1
+	#: Black color.
 	BLACK=-16777216
+	#: Gray color.
 	GRAY=-8355712
+	#: Dark gray color.
 	DARK_GRAY=-12566464
+	#: Light gray color.
 	LIGHT_GRAY=-6250336
+	#: Alternate white color.
 	ALTERNATE_WHITE=-4539718
+	#: Red color.
 	RED=-65536
+	#: Light red color.
 	LIGHT_RED=-2142128
+	#: Green color.
 	GREEN=-16711936
+	#: Blue color.
 	BLUE=-16776961
+	#: Yellow color.
 	YELLOW=-256
+	#: Light yellow color.
 	LIGHT_YELLOW=-171
+	#: Purple color.
 	PURPLE=-11534256
+	#: Cyan color.
 	CYAN=-11010079
+	#: Light pink color.
 	LIGHT_PINK=-13108
+	#: Lighter gray color.
 	LIGHTER_GRAY=-2039584
 
+
+# noinspection PyUnresolvedReferences
 class Matrix:
+	"""
+	Represents a 2D matrix that supports scaling, rotation and translation operations.
+	"""
 	def __init__(self):
 		self._scale=[1,1]
 		self._rotate=0
 		self._translation=[0,0]
 
 	def scale(self,x,y=None):
+		"""
+		Applies scaling to the matrix.
+
+		:param x: Scaling factor along x-axis.
+		:param y: Scaling factor along y-axis. If not provided, `x` is used.
+		:return: This matrix.
+		"""
 		if (y is None): y=x
 		self._scale=[self._scale[0]*x,self._scale[1]*y]
 		return self
 
 	def rotate(self,radians):
+		"""
+		Applies rotation to the matrix.
+
+		:param radians: Angle to rotate in radians.
+		:return: This matrix.
+		"""
 		self._rotate+=radians
 		return self
 
 	def translate(self,x,y):
+		"""
+		Applies translation to the matrix.
+
+		:param x: Translation along x-axis.
+		:param y: Translation along y-axis.
+		:return: This matrix.
+		"""
 		self._translation=[self._translation[0]+x,self._translation[1]+y]
 		return self
 
-	def to_list(self):
-		return *self._scale,self._rotate,*self._translation
+	def to_list(self)->list:
+		"""
+		Converts this matrix into a list.
+
+		:return: List containing all elements of this matrix.
+		"""
+		return [*self._scale,self._rotate,*self._translation]
 
 	@classmethod
 	def from_dict(cls,info):
@@ -61,12 +110,18 @@ class BaseObject:
 		return ()
 
 class Identifier:
+	"""
+	Represents a texture identifier.
+
+	:param path: Path to the texture starting from the ``textures/gui/sprites/`` folder.
+	:param vanilla: ``True`` if the texture is a vanilla texture, ``False`` otherwise.
+	"""
 	def __init__(self,path:str,vanilla:bool):
 		self.path=path
 		self.vanilla=vanilla
 
-	def to_list(self):
-		return self.path,self.vanilla
+	def to_list(self)->list:
+		return [self.path,self.vanilla]
 
 
 
@@ -989,7 +1044,7 @@ def add_texture(texture:Identifier,x:int,y:int,width:int,height:int,alpha:float,
 	"""
 	Add a texture element to the screen.
 
-	To add custom textures see :doc:`Adding Custom Textures <../installation>`.
+	To add custom textures see :doc:`Adding Custom Textures <../custom_textures>`.
 
 	:param texture: Identifier of the texture. See :class:`Identifier` for more information.
 	:param x: X-coordinate of the texture position.
@@ -1009,7 +1064,7 @@ def add_advanced_texture(texture:Identifier,x:int,y:int,width:int,height:int,alp
 	"""
 	Add a texture element to the screen, with additional scaling, rotation, and translation options.
 
-	To add custom textures see :doc:`Adding Custom Textures <../installation>`.
+	To add custom textures see :doc:`Adding Custom Textures <../custom_textures>`.
 
 	Advanced version of :func:`add_texture` that allows custom transformations.
 
@@ -1082,6 +1137,9 @@ class MouseObject:
 		self.was_pressed_right=mouse["right"]
 
 def rainbow_animation(t:BaseObject,step:int=1):
+	"""
+	A simple rainbow animation. Animates the ``color`` property of an element. It is recommended to set the base color to ``Colors.RED``.
+	"""
 	a,r,g,b=argb_to_int(t.color)
 	h,s,v=rgb_to_hsv(r/255,g/255,b/255)
 	h+=step/255
@@ -1092,6 +1150,12 @@ def rainbow_animation(t:BaseObject,step:int=1):
 
 # noinspection PyTypeChecker
 def rainbow_animation_with_speed(step:int)->Callable[[BaseObject,int],None]:
+	"""
+	This function returns a :func:`rainbow_animation` with the given speed.
+
+	:param step: Amount by which to change color every frame.
+	:return: :func:`rainbow_animation` with given speed.
+	"""
 	if (step>255 or step<-255):
 		raise ValueError("Step must be between -255 and 255")
 	return lambda t:rainbow_animation(t,step)
