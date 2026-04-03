@@ -42,6 +42,6 @@ replay_*.log
 # me
 
 libs/
-source/Minescript
+source/
 docs/draw_text.py
 docs/make_doc_file.py

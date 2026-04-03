@@ -7,7 +7,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
-@Mixin(Job.SubprocessJob.class)
+@Mixin(Job.class)
 public class SubprocessJobMixin {
 	@Redirect(method="runOnJobThread",at=@At(value="INVOKE",target="Lnet/minescript/common/SystemMessageQueue;logUserInfo(Ljava/lang/String;[Ljava/lang/Object;)V"))
 	private static void runOnJobThread(SystemMessageQueue cls, String message, Object[] args) {

@@ -1,5 +1,7 @@
 package net.mb.minescripthud.mixin;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonPrimitive;
 import net.mb.minescripthud.DrawHelper;
 import net.mb.minescripthud.MinescriptHUDAddon;
 import net.mb.minescripthud.ScriptFrameWaiter;
@@ -16,35 +18,38 @@ import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Optional;
 
 @Mixin(Minescript.class)
 public class MinescriptMixin {
+	private static final Optional<JsonElement> OPTIONAL_JSON_TRUE=Optional.of(new JsonPrimitive(true));
+
     @Inject(method = "runScriptFunction",at=@At("HEAD"),cancellable = true)
-    private static void runScriptFunction(JobControl job, long funcCallId, ScriptFunctionCall functionCall, CallbackInfoReturnable<ScriptValue> cir) {
+    private static void runScriptFunction(Job job, long funcCallId, ScriptFunctionCall functionCall, CallbackInfoReturnable<Optional<JsonElement>> cir) {
         String name = functionCall.name();
         ScriptFunctionCall.ArgList args = functionCall.args();
 		switch (name) {
 			case "add_text" -> {
 				args.expectSize(7);
 				int id=DrawHelper.getInstance().addText(args.getString(0), args.getStrictInt(1), args.getStrictInt(2), args.getStrictInt(3), args.getBoolean(4), args.getDouble(5),args.getStrictInt(6));
-				cir.setReturnValue(ScriptValue.of(id));
+				cir.setReturnValue(Optional.of(new JsonPrimitive(id)));
 				cir.cancel();
 			}
 			case "add_advanced_text" -> {
 				args.expectSize(12);
 				int id=DrawHelper.getInstance().addAdvancedText(args.getString(0), args.getStrictInt(1), args.getStrictInt(2), args.getStrictInt(3), args.getBoolean(4), args.getDouble(5),args.getStrictInt(6),args.getDouble(7),args.getDouble(8),args.getDouble(9),args.getDouble(10),args.getDouble(11));
-				cir.setReturnValue(ScriptValue.of(id));
+				cir.setReturnValue(Optional.of(new JsonPrimitive(id)));
 				cir.cancel();
 			}
 			case "get_text_object" -> {
 				args.expectSize(1);
-				cir.setReturnValue(ScriptValue.of(DrawHelper.getInstance().getTextObject(args.getStrictInt(0))));
+				cir.setReturnValue(Optional.of(DrawHelper.getInstance().getTextObject(args.getStrictInt(0)).toJson()));
 				cir.cancel();
 			}
 			case "update_text" -> {
 				args.expectSize(13);
 				DrawHelper.getInstance().updateText(args.getStrictInt(0), args.getString(1), args.getStrictInt(2), args.getStrictInt(3), args.getStrictInt(4), args.getBoolean(5), args.getDouble(6),args.getStrictInt(7),args.getDouble(8),args.getDouble(9),args.getDouble(10),args.getDouble(11),args.getDouble(12));
-				cir.setReturnValue(ScriptValue.TRUE);
+				cir.setReturnValue(OPTIONAL_JSON_TRUE);
 				cir.cancel();
 			}
 
@@ -54,52 +59,35 @@ public class MinescriptMixin {
 			case "add_rectangle" -> {
 				args.expectSize(7);
 				int id=DrawHelper.getInstance().addRectangle(args.getStrictInt(0),args.getStrictInt(1),args.getStrictInt(2),args.getStrictInt(3),args.getStrictInt(4),args.getDouble(5),args.getStrictInt(6));
-				cir.setReturnValue(ScriptValue.of(id));
+				cir.setReturnValue(Optional.of(new JsonPrimitive(id)));
 				cir.cancel();
 			}
 			case "get_rectangle_object" -> {
 				args.expectSize(1);
-				cir.setReturnValue(ScriptValue.of(DrawHelper.getInstance().getRectangleObject(args.getStrictInt(0))));
+				cir.setReturnValue(Optional.of(DrawHelper.getInstance().getRectangleObject(args.getStrictInt(0)).toJson()));
 				cir.cancel();
 			}
 			case "update_rectangle" -> {
 				args.expectSize(8);
 				DrawHelper.getInstance().updateRectangle(args.getStrictInt(0),args.getStrictInt(1),args.getStrictInt(2),args.getStrictInt(3),args.getStrictInt(4),args.getStrictInt(5),args.getDouble(6),args.getStrictInt(7));
-				cir.setReturnValue(ScriptValue.TRUE);
+				cir.setReturnValue(OPTIONAL_JSON_TRUE);
 				cir.cancel();
 			}
 			case "add_gradient_rectangle" -> {
 				args.expectSize(8);
 				int id=DrawHelper.getInstance().addGradientRectangle(args.getStrictInt(0),args.getStrictInt(1),args.getStrictInt(2),args.getStrictInt(3),args.getStrictInt(4),args.getStrictInt(5),args.getDouble(6),args.getStrictInt(7));
-				cir.setReturnValue(ScriptValue.of(id));
+				cir.setReturnValue(Optional.of(new JsonPrimitive(id)));
 				cir.cancel();
 			}
 			case "get_gradient_rectangle_object" -> {
 				args.expectSize(1);
-				cir.setReturnValue(ScriptValue.of(DrawHelper.getInstance().getGradientRectangleObject(args.getStrictInt(0))));
+				cir.setReturnValue(Optional.of(DrawHelper.getInstance().getGradientRectangleObject(args.getStrictInt(0)).toJson()));
 				cir.cancel();
 			}
 			case "update_gradient_rectangle" -> {
 				args.expectSize(9);
 				DrawHelper.getInstance().updateGradientRectangle(args.getStrictInt(0),args.getStrictInt(1),args.getStrictInt(2),args.getStrictInt(3),args.getStrictInt(4),args.getStrictInt(5),args.getStrictInt(6),args.getDouble(7),args.getStrictInt(8));
-				cir.setReturnValue(ScriptValue.TRUE);
-				cir.cancel();
-			}
-			case "add_stroked_rectangle" -> {
-				args.expectSize(7);
-				int id=DrawHelper.getInstance().addStrokedRectangle(args.getStrictInt(0),args.getStrictInt(1),args.getStrictInt(2),args.getStrictInt(3),args.getStrictInt(4),args.getDouble(5),args.getStrictInt(6));
-				cir.setReturnValue(ScriptValue.of(id));
-				cir.cancel();
-			}
-			case "get_stroked_rectangle_object" -> {
-				args.expectSize(1);
-				cir.setReturnValue(ScriptValue.of(DrawHelper.getInstance().getStrokedRectangleObject(args.getStrictInt(0))));
-				cir.cancel();
-			}
-			case "update_stroked_rectangle" -> {
-				args.expectSize(9);
-				DrawHelper.getInstance().updateStrokedRectangle(args.getStrictInt(0),args.getStrictInt(1),args.getStrictInt(2),args.getStrictInt(3),args.getStrictInt(4),args.getStrictInt(5),args.getDouble(6),args.getStrictInt(7));
-				cir.setReturnValue(ScriptValue.TRUE);
+				cir.setReturnValue(OPTIONAL_JSON_TRUE);
 				cir.cancel();
 			}
 
@@ -110,24 +98,24 @@ public class MinescriptMixin {
 			case "add_text_with_background" -> {
 				args.expectSize(10);
 				int id=DrawHelper.getInstance().addTextWithBackground(args.getString(0), args.getStrictInt(1), args.getStrictInt(2), args.getStrictInt(3), args.getStrictInt(4), args.getStrictInt(5), args.getStrictInt(6), args.getBoolean(7), args.getDouble(8), args.getStrictInt(9));
-				cir.setReturnValue(ScriptValue.of(id));
+				cir.setReturnValue(Optional.of(new JsonPrimitive(id)));
 				cir.cancel();
 			}
 			case "add_advanced_text_with_background" -> {
 				args.expectSize(15);
 				int id=DrawHelper.getInstance().addAdvancedTextWithBackground(args.getString(0), args.getStrictInt(1), args.getStrictInt(2), args.getStrictInt(3), args.getStrictInt(4), args.getStrictInt(5), args.getStrictInt(6), args.getBoolean(7), args.getDouble(8), args.getStrictInt(9), args.getDouble(10), args.getDouble(11), args.getDouble(12), args.getDouble(13), args.getDouble(14));
-				cir.setReturnValue(ScriptValue.of(id));
+				cir.setReturnValue(Optional.of(new JsonPrimitive(id)));
 				cir.cancel();
 			}
 			case "get_text_with_background_object" -> {
 				args.expectSize(1);
-				cir.setReturnValue(ScriptValue.of(DrawHelper.getInstance().getTextWithBackgroundObject(args.getStrictInt(0))));
+				cir.setReturnValue(Optional.of(DrawHelper.getInstance().getTextWithBackgroundObject(args.getStrictInt(0)).toJson()));
 				cir.cancel();
 			}
 			case "update_text_with_background" -> {
 				args.expectSize(16);
 				DrawHelper.getInstance().updateTextWithBackground(args.getStrictInt(0), args.getString(1), args.getStrictInt(2), args.getStrictInt(3), args.getStrictInt(4), args.getStrictInt(5), args.getStrictInt(6), args.getStrictInt(7), args.getBoolean(8), args.getDouble(9), args.getStrictInt(10), args.getDouble(11), args.getDouble(12), args.getDouble(13), args.getDouble(14), args.getDouble(15));
-				cir.setReturnValue(ScriptValue.TRUE);
+				cir.setReturnValue(OPTIONAL_JSON_TRUE);
 				cir.cancel();
 			}
 
@@ -138,24 +126,24 @@ public class MinescriptMixin {
 			case "add_item" -> {
 				args.expectSize(5);
 				int id=DrawHelper.getInstance().addItem(args.getString(0), args.getStrictInt(1), args.getStrictInt(2), args.getDouble(3), args.getStrictInt(4));
-				cir.setReturnValue(ScriptValue.of(id));
+				cir.setReturnValue(Optional.of(new JsonPrimitive(id)));
 				cir.cancel();
 			}
 			case "add_advanced_item" -> {
 				args.expectSize(10);
 				int id=DrawHelper.getInstance().addAdvancedItem(args.getString(0), args.getStrictInt(1), args.getStrictInt(2), args.getDouble(3), args.getStrictInt(4), args.getDouble(5), args.getDouble(6), args.getDouble(7), args.getDouble(8), args.getDouble(9));
-				cir.setReturnValue(ScriptValue.of(id));
+				cir.setReturnValue(Optional.of(new JsonPrimitive(id)));
 				cir.cancel();
 			}
 			case "get_item_object" -> {
 				args.expectSize(1);
-				cir.setReturnValue(ScriptValue.of(DrawHelper.getInstance().getItemObject(args.getStrictInt(0))));
+				cir.setReturnValue(Optional.of(DrawHelper.getInstance().getItemObject(args.getStrictInt(0)).toJson()));
 				cir.cancel();
 			}
 			case "update_item" -> {
 				args.expectSize(11);
 				DrawHelper.getInstance().updateItem(args.getStrictInt(0), args.getString(1), args.getStrictInt(2), args.getStrictInt(3), args.getDouble(4), args.getStrictInt(5), args.getDouble(6), args.getDouble(7), args.getDouble(8), args.getDouble(9), args.getDouble(10));
-				cir.setReturnValue(ScriptValue.TRUE);
+				cir.setReturnValue(OPTIONAL_JSON_TRUE);
 				cir.cancel();
 			}
 
@@ -166,24 +154,24 @@ public class MinescriptMixin {
 			case "add_texture" -> {
 				args.expectSize(9);
 				int id=DrawHelper.getInstance().addTexture(args.getString(0), args.getBoolean(1), args.getStrictInt(2), args.getStrictInt(3), args.getStrictInt(4), args.getStrictInt(5), args.getDouble(6), args.getDouble(7), args.getStrictInt(8));
-				cir.setReturnValue(ScriptValue.of(id));
+				cir.setReturnValue(Optional.of(new JsonPrimitive(id)));
 				cir.cancel();
 			}
 			case "add_advanced_texture" -> {
 				args.expectSize(14);
 				int id=DrawHelper.getInstance().addAdvancedTexture(args.getString(0), args.getBoolean(1), args.getStrictInt(2), args.getStrictInt(3), args.getStrictInt(4), args.getStrictInt(5), args.getDouble(6), args.getDouble(7), args.getStrictInt(8), args.getDouble(9), args.getDouble(10), args.getDouble(11), args.getDouble(12), args.getDouble(13));
-				cir.setReturnValue(ScriptValue.of(id));
+				cir.setReturnValue(Optional.of(new JsonPrimitive(id)));
 				cir.cancel();
 			}
 			case "get_texture_object" -> {
 				args.expectSize(1);
-				cir.setReturnValue(ScriptValue.of(DrawHelper.getInstance().getTextureObject(args.getStrictInt(0))));
+				cir.setReturnValue(Optional.of(DrawHelper.getInstance().getTextureObject(args.getStrictInt(0)).toJson()));
 				cir.cancel();
 			}
 			case "update_texture" -> {
 				args.expectSize(15);
 				DrawHelper.getInstance().updateTexture(args.getStrictInt(0), args.getString(1), args.getBoolean(2), args.getStrictInt(3), args.getStrictInt(4), args.getStrictInt(5), args.getStrictInt(6), args.getDouble(7), args.getDouble(8), args.getStrictInt(9), args.getDouble(10), args.getDouble(11), args.getDouble(12), args.getDouble(13), args.getDouble(14));
-				cir.setReturnValue(ScriptValue.TRUE);
+				cir.setReturnValue(OPTIONAL_JSON_TRUE);
 				cir.cancel();
 			}
 
@@ -194,36 +182,36 @@ public class MinescriptMixin {
 			case "remove_element" -> {
 				args.expectSize(1);
 				DrawHelper.getInstance().removeElement(args.getStrictInt(0));
-				cir.setReturnValue(ScriptValue.TRUE);
+				cir.setReturnValue(OPTIONAL_JSON_TRUE);
 				cir.cancel();
 			}
 			case "still_exists" -> {
 				args.expectSize(1);
-				cir.setReturnValue(ScriptValue.of(DrawHelper.getInstance().stillExists(args.getStrictInt(0))));
+				cir.setReturnValue(Optional.of(new JsonPrimitive(DrawHelper.getInstance().stillExists(args.getStrictInt(0)))));
 				cir.cancel();
 			}
 			case "get_mouse" -> {
-				cir.setReturnValue(ScriptValue.of(DrawHelper.getInstance().getMouse()));
+				cir.setReturnValue(Optional.of(DrawHelper.getInstance().getMouse().toJson()));
 				cir.cancel();
 			}
 			case "get_font_height" -> {
-				cir.setReturnValue(ScriptValue.of(MinecraftClient.getInstance().textRenderer.fontHeight));
+				cir.setReturnValue(Optional.of(new JsonPrimitive(MinecraftClient.getInstance().textRenderer.fontHeight)));
 				cir.cancel();
 			}
             case "wait_next_frame" -> {
 				job.suspend();
 				ScriptFrameWaiter.getInstance().waitNextFrame(funcCallId, job::resume);
-                cir.setReturnValue(ScriptValue.TRUE);
+                cir.setReturnValue(OPTIONAL_JSON_TRUE);
                 cir.cancel();
             }
 			case "clear" -> {
 				DrawHelper.getInstance().clear();
-				cir.setReturnValue(ScriptValue.TRUE);
+				cir.setReturnValue(OPTIONAL_JSON_TRUE);
 				cir.cancel();
 			}
 			case "suppress_done_message" -> {
 				MinescriptHUDAddon.silent=true;
-				cir.setReturnValue(ScriptValue.TRUE);
+				cir.setReturnValue(OPTIONAL_JSON_TRUE);
 				cir.cancel();
 			}
 		}

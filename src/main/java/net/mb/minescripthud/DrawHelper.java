@@ -12,7 +12,6 @@ import net.minecraft.command.argument.ItemStringReader;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
 import net.minecraft.util.Identifier;
-import net.minescript.common.Jsonable;
 import org.joml.Matrix3x2f;
 
 import java.util.*;
@@ -122,20 +121,6 @@ public class DrawHelper {
 
 	public void updateGradientRectangle(int id, int sx, int sy, int ex, int ey, int startColor, int endColor, double displayDurationModifier, int layer) {
 		elementUpdates.put(id,new GradientRectangleObjectUpdate(sx,sy,ex,ey,startColor,endColor,displayDurationModifier,layer));
-	}
-
-	public int addStrokedRectangle(int sx, int sy, int ex, int ey, int startColor, double displayDuration, int layer) {
-		int i=this.getId();
-		elements.put(i,new StrokedRectangleObject(sx,sy,ex,ey,startColor,displayDuration,layer));
-		return i;
-	}
-
-	public JsonableStrokedRectangleObject getStrokedRectangleObject(int id) {
-		return new JsonableStrokedRectangleObject((StrokedRectangleObject) elements.get(id));
-	}
-
-	public void updateStrokedRectangle(int id, int sx, int sy, int ex, int ey, int startColor, double displayDurationModifier, int layer) {
-		elementUpdates.put(id,new StrokedRectangleObjectUpdate(sx,sy,ex,ey,startColor,displayDurationModifier,layer));
 	}
 
 
@@ -283,8 +268,6 @@ public class DrawHelper {
 				context.fill(b.getStartX(), b.getStartY(), b.getEndX(), b.getEndY(), b.getColor());
 			case GradientRectangleObject b ->
 				context.fillGradient(b.getStartX(),b.getStartY(),b.getEndX(),b.getEndY(),b.getStartColor(),b.getEndColor());
-			case StrokedRectangleObject b ->
-				context.drawStrokedRectangle(b.getX(),b.getY(),b.getWidth(),b.getHeight(),b.getColor());
 			case TextWithBackgroundObject t -> {
 				context.fill(t.getX()-t.getMarginX(), t.getY()-t.getMarginY(), t.getX()+client.textRenderer.getWidth(t.getText())-1+t.getMarginX(), t.getY()+client.textRenderer.fontHeight-2+t.getMarginY(), t.getBgColor());
 				context.drawText(client.textRenderer, t.getText(), t.getX(), t.getY(), t.getColor(), t.getShadow());
