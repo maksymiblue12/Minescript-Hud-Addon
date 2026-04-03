@@ -8,8 +8,9 @@
 		"Maks"
 	],
 	"contact": {
-		"homepage": "https://fabricmc.net/",
-		"sources": "https://github.com/FabricMC/fabric-example-mod"
+		"issues": "https://github.com/maksymiblue12/Minescript-Hud-Addon/issues",
+		"sources": "https://github.com/maksymiblue12/Minescript-Hud-Addon",
+		"docs": "https://maksymiblue12.github.io/Minescript-Hud-Addon/"
 	},
 	"license": "CC0-1.0",
 	"icon": "assets/minescripthud/icon.png",
