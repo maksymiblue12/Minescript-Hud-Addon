@@ -85,23 +85,6 @@ public class MinescriptMixin {
 				cir.setReturnValue(ScriptValue.TRUE);
 				cir.cancel();
 			}
-			case "add_stroked_rectangle" -> {
-				args.expectSize(7);
-				int id=DrawHelper.getInstance().addStrokedRectangle(args.getStrictInt(0),args.getStrictInt(1),args.getStrictInt(2),args.getStrictInt(3),args.getStrictInt(4),args.getDouble(5),args.getStrictInt(6));
-				cir.setReturnValue(ScriptValue.of(id));
-				cir.cancel();
-			}
-			case "get_stroked_rectangle_object" -> {
-				args.expectSize(1);
-				cir.setReturnValue(ScriptValue.of(DrawHelper.getInstance().getStrokedRectangleObject(args.getStrictInt(0))));
-				cir.cancel();
-			}
-			case "update_stroked_rectangle" -> {
-				args.expectSize(9);
-				DrawHelper.getInstance().updateStrokedRectangle(args.getStrictInt(0),args.getStrictInt(1),args.getStrictInt(2),args.getStrictInt(3),args.getStrictInt(4),args.getStrictInt(5),args.getDouble(6),args.getStrictInt(7));
-				cir.setReturnValue(ScriptValue.TRUE);
-				cir.cancel();
-			}
 
 
 
