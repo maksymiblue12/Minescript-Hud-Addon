@@ -1,6 +1,7 @@
 from colorsys import rgb_to_hsv,hsv_to_rgb
 from minescript_runtime import ScriptFunction
 from collections.abc import Callable
+from math import radians,sin,cos,ceil,hypot
 
 
 class Colors:
@@ -39,7 +40,6 @@ class Colors:
 	LIGHT_PINK=-13108
 	#: Lighter gray color.
 	LIGHTER_GRAY=-2039584
-
 
 # noinspection PyUnresolvedReferences
 class Matrix:
@@ -122,6 +122,82 @@ class Identifier:
 
 	def to_list(self)->list:
 		return [self.path,self.vanilla]
+
+class Vertex:
+	def __init__(self,x:int,y:int,color:int):
+		self.x=x
+		self.y=y
+		self.color=color
+
+	def to_dict(self)->dict:
+		return {"x":self.x,"y":self.y,"color":self.color}
+
+class Line:
+	def __init__(self,start:Vertex,end:Vertex):
+		self.start=start
+		self.end=end
+
+	def to_list(self)->list:
+		return [self.start.to_dict(),self.end.to_dict()]\
+
+def update_batch(data):
+	return (data,)
+update_batch=ScriptFunction("batch_update",update_batch)
+
+class BatchAnimator:
+	def __init__(self):
+		self.animations=[]
+
+	def animate_text(self,_id,func):
+		self.animations.append({"id":_id,"func":func,"type":"text","object_type":TextObject,"object":None})
+		return self
+
+	def animate_rectangle(self,_id,func):
+		self.animations.append({"id":_id,"func":func,"type":"rectangle","object_type":RectangleObject,"object":None})
+		return self
+
+	def animate_gradient_rectangle(self,_id,func):
+		self.animations.append({"id":_id,"func":func,"type":"gradient_rectangle","object_type":GradientRectangleObject,"object":None})
+		return self
+
+	def animate_text_with_background(self,_id,func):
+		self.animations.append({"id":_id,"func":func,"type":"text_with_background","object_type":TextWithBackgroundObject,"object":None})
+		return self
+
+	def animate_item(self,_id,func):
+		self.animations.append({"id":_id,"func":func,"type":"item","object_type":ItemObject,"object":None})
+		return self
+
+	def animate_texture(self,_id,func):
+		self.animations.append({"id":_id,"func":func,"type":"texture","object_type":TextureObject,"object":None})
+		return self
+
+	def animate_shape(self,_id,func):
+		self.animations.append({"id":_id,"func":func,"type":"shape","object_type":ShapeObject,"object":None})
+		return self
+
+	def start(self):
+		while (len(self.animations)>0):
+			data=[]
+			for anim in self.animations:
+				_id,func,obj=anim["id"],anim["func"],anim["object"]
+				if (not still_exists(_id)):
+					continue
+				if (obj is None):
+					obj=anim["object_type"](_id)
+					anim["object"]=obj
+				if (not obj.update(_id)):
+					continue
+				func(obj)
+				l=obj.to_list()
+				if (any(x is None for x in l)): continue
+				for i in range(len(l)):
+					if (hasattr(l[i],"to_list")):
+						l[i:i+1]=l[i].to_list()
+				data.append({"id":_id,"type":anim["type"],"data":l})
+			update_batch(data)
+			self.animations=[a for a in self.animations if still_exists(a["id"])]
+			wait_next_frame()
 
 
 
@@ -1017,6 +1093,237 @@ def modify_texture(_id:int,func:Callable[[TextureObject],None])->None:
 
 
 
+class ShapeObject(BaseObject):
+	# noinspection PyMissingConstructor
+	def __init__(self,_id:int):
+		self.update(_id)
+
+	@property
+	def display_duration(self):
+		return self._display_duration
+
+	# noinspection PyAttributeOutsideInit
+	def update(self,_id:int):
+		info=get_shape_object(_id)
+		if (info is None or any(map(lambda x:x is None,info.values()))):
+			return False
+		self.lines=[]
+		vertices=list(map(lambda v:Vertex(v["x"],v["y"],v["color"]),info["vertices"]))
+		if (len(vertices)%2!=0):
+			raise ValueError("Internal error, shape object has odd number of vertices!")
+		for i in range(0,len(vertices),2):
+			self.lines.append(Line(vertices[i],vertices[i+1]))
+		self._display_duration:float=info["displayDuration"]
+		self.display_duration_modifier:float=0
+		self.layer:int=info["layer"]
+		self.matrix=Matrix.from_dict(info)
+		return True
+
+	def to_list(self)->list:
+		return [self.lines,self.display_duration_modifier,self.layer,self.matrix]
+
+def add_shape(lines:list[Line],display_duration:float,layer:int=1)->int:
+	out=[]
+	for l in lines: out.extend(l.to_list())
+	return (out,display_duration,layer)
+add_shape=ScriptFunction("add_shape",add_shape)
+
+def add_advanced_shape(lines:list[Line],display_duration:float,layer:int,matrix:Matrix)->int:
+	out=[]
+	for l in lines: out.extend(l.to_list())
+	return (out,display_duration,layer,*matrix.to_list())
+add_advanced_shape=ScriptFunction("add_advanced_shape",add_advanced_shape)
+
+# noinspection PyTypeChecker
+def get_shape_object(_id:int)->dict:
+	return (_id,)
+get_shape_object=ScriptFunction("get_shape_object",get_shape_object)
+
+def update_shape(_id:int,lines:list[Line],display_duration:float,layer:int,matrix:Matrix):
+	out=[]
+	for l in lines: out.extend(l.to_list())
+	return (_id,out,display_duration,layer,*matrix.to_list())
+update_shape=ScriptFunction("update_shape",update_shape)
+
+def _animate_shape(_id:int,func:Callable[[ShapeObject],None])->None:
+	s=ShapeObject(_id)
+	while (still_exists(_id)):
+		if (s.update(_id)):
+			func(s)
+			l=s.to_list()
+			if (any(map(lambda x:(x is None),l))): return
+			update_shape(_id,*l)
+			wait_next_frame()
+
+def animate_shape(_id:int,func:Callable[[ShapeObject],None])->None:
+	_animate_shape(_id,func)
+
+def modify_shape(_id:int,func:Callable[[ShapeObject],None])->None:
+	s=ShapeObject(_id)
+	if (still_exists(_id)):
+		if (s.update(_id)):
+			func(s)
+			update_shape(_id,*s.to_list())
+
+
+def get_lines_for_triangle(v1:Vertex,v2:Vertex,v3:Vertex)->list[Line]:
+	return [Line(v1,v2),Line(v2,v3)]
+
+def add_triangle(p1:tuple[int,int],p2:tuple[int,int],p3:tuple[int,int],color:int,display_duration:float,layer:int=1)->int:
+	return add_shape(get_lines_for_triangle(Vertex(*p1,color),Vertex(*p2,color),Vertex(*p3,color)),display_duration,layer)
+
+def add_line(start:tuple[int,int],end:tuple[int,int],width:int,color:int,display_duration:float,layer:int=1)->int:
+	start_x,start_y=start;end_x,end_y=end
+	dx=end_x-start_x
+	dy=end_y-start_y
+	length=hypot(dx,dy)
+	wx=dy/length*ceil(width/2)
+	wy=-dx/length*ceil(width/2)
+	v1=Vertex(start_x+wx,start_y+wy,color)
+	v2=Vertex(start_x-wx,start_y-wy,color)
+	v3=Vertex(end_x-wx,end_y-wy,color)
+	v4=Vertex(end_x+wx,end_y+wy,color)
+	return add_shape(get_lines_for_triangle(v1,v2,v3)+get_lines_for_triangle(v1,v3,v4),display_duration,layer)
+
+def add_multiline(points:list[tuple[int,int]],width:int,color:int,display_duration:float,layer:int=1)->int:
+	lines=[]
+	for i in range(1,len(points)):
+		start_x,start_y=points[i-1];end_x,end_y=points[i]
+		dx=end_x-start_x
+		dy=end_y-start_y
+		length=hypot(dx,dy)
+		wx=dy/length*ceil(width/2)
+		wy=-dx/length*ceil(width/2)
+		v1=Vertex(start_x+wx,start_y+wy,color)
+		v2=Vertex(start_x-wx,start_y-wy,color)
+		v3=Vertex(end_x-wx,end_y-wy,color)
+		v4=Vertex(end_x+wx,end_y+wy,color)
+		lines+=get_lines_for_triangle(v1,v2,v3)+get_lines_for_triangle(v1,v3,v4)
+	return add_shape(lines,display_duration,layer)
+
+def add_advanced_multiline(points:list[tuple[int,int,int]],width:int,display_duration:float,layer:int=1)->int:
+	lines=[]
+	for i in range(1,len(points)):
+		start_x,start_y,start_color=points[i-1];end_x,end_y,end_color=points[i]
+		dx=end_x-start_x
+		dy=end_y-start_y
+		length=hypot(dx,dy)
+		wx=dy/length*ceil(width/2)
+		wy=-dx/length*ceil(width/2)
+		v1=Vertex(start_x+wx,start_y+wy,start_color)
+		v2=Vertex(start_x-wx,start_y-wy,start_color)
+		v3=Vertex(end_x-wx,end_y-wy,end_color)
+		v4=Vertex(end_x+wx,end_y+wy,end_color)
+		lines+=get_lines_for_triangle(v1,v2,v3)+get_lines_for_triangle(v1,v3,v4)
+	return add_shape(lines,display_duration,layer)
+
+def get_lines_for_quad(p1:tuple[int,int],p2:tuple[int,int],p3:tuple[int,int],p4:tuple[int,int],color:int)->list[Line]:
+	if (len({p1,p2,p3,p4})!=4):
+		raise ValueError("Points must be unique!")
+	points=[p1,p2,p3,p4]
+	points.sort(key=lambda p:p[1])
+	tl,tr=((points[0],points[1]) if points[0][0]<points[1][0] else (points[1],points[0]))
+	bl,br=((points[2],points[3]) if points[2][0]<points[3][0] else (points[3],points[2]))
+	tl,tr,bl,br=Vertex(*tl,color),Vertex(*tr,color),Vertex(*bl,color),Vertex(*br,color)
+	return get_lines_for_triangle(tl,bl,br)+get_lines_for_triangle(tl,br,tr)
+
+def add_quad(p1:tuple[int,int],p2:tuple[int,int],p3:tuple[int,int],p4:tuple[int,int],color:int,display_duration:float,layer:int=1)->int:
+	return add_shape(get_lines_for_quad(p1,p2,p3,p4,color),display_duration,layer)
+
+def get_lines_for_circle(center_x:int,center_y:int,radius:int,color:int,segments:int=1000)->list[Line]:
+	last=None
+	first=None
+	center=Vertex(center_x,center_y,color)
+	lines=[]
+	for i in range(segments):
+		a=radians((i/segments)*360)
+		x=center_x+radius*cos(a)
+		y=center_y-radius*sin(a)
+		v=Vertex(x,y,color)
+		if (last is None):
+			last=v
+			first=v
+		else:
+			lines+=get_lines_for_triangle(v,center,last)
+			last=v
+	lines+=get_lines_for_triangle(first,center,last)
+	return lines
+
+def add_circle(center_x:int,center_y:int,radius:int,color:int,display_duration:float,segments:int=1000,layer=1)->int:
+	return add_shape(get_lines_for_circle(center_x,center_y,radius,color,segments),display_duration,layer)
+
+def get_lines_for_advanced_circle(center_x:int,center_y:int,radius:int,color:int,center_color:int,vertex_modifier:Callable[[Vertex,int],None],segments:int=1000)->list[Line]:
+	last=None
+	first=None
+	center=Vertex(center_x,center_y,center_color)
+	lines=[]
+	for i in range(segments):
+		a=radians((i/segments)*360)
+		x=center_x+radius*cos(a)
+		y=center_y-radius*sin(a)
+		v=Vertex(x,y,color)
+		vertex_modifier(v,i)
+		if (last is None):
+			last=v
+			first=v
+		else:
+			lines+=get_lines_for_triangle(v,center,last)
+			last=v
+	lines+=get_lines_for_triangle(first,center,last)
+	return lines
+
+def add_advanced_circle(center_x:int,center_y:int,radius:int,color:int,center_color:int,vertex_modifier:Callable[[Vertex,int],None],display_duration:float,segments:int=1000,layer=1)->int:
+	return add_shape(get_lines_for_advanced_circle(center_x,center_y,radius,color,center_color,vertex_modifier,segments),display_duration,layer)
+
+def get_lines_for_ellipse(center_x:int,center_y:int,radius_x:int,radius_y:int,color:int,segments:int=1000)->list[Line]:
+	last=None
+	first=None
+	center=Vertex(center_x,center_y,color)
+	lines=[]
+	for i in range(segments):
+		a=radians((i/segments)*360)
+		x=center_x+radius_x*cos(a)
+		y=center_y-radius_y*sin(a)
+		v=Vertex(x,y,color)
+		if (last is None):
+			last=v
+			first=v
+		else:
+			lines+=get_lines_for_triangle(v,center,last)
+			last=v
+	lines+=get_lines_for_triangle(first,center,last)
+	return lines
+
+def add_ellipse(center_x:int,center_y:int,radius_x:int,radius_y:int,color:int,display_duration:float,segments:int=1000,layer=1)->int:
+	return add_shape(get_lines_for_ellipse(center_x,center_y,radius_x,radius_y,color,segments),display_duration,layer)
+
+def get_lines_for_advanced_ellipse(center_x:int,center_y:int,radius_x:int,radius_y:int,color:int,center_color:int,vertex_modifier:Callable[[Vertex,int],None],segments:int=1000)->list[Line]:
+	last=None
+	first=None
+	center=Vertex(center_x,center_y,center_color)
+	lines=[]
+	for i in range(segments):
+		a=radians((i/segments)*360)
+		x=center_x+radius_x*cos(a)
+		y=center_y-radius_y*sin(a)
+		v=Vertex(x,y,color)
+		vertex_modifier(v,i)
+		if (last is None):
+			last=v
+			first=v
+		else:
+			lines+=get_lines_for_triangle(v,center,last)
+			last=v
+	lines+=get_lines_for_triangle(first,center,last)
+	return lines
+
+def add_advanced_ellipse(center_x:int,center_y:int,radius_x:int,radius_y:int,color:int,center_color:int,vertex_modifier:Callable[[Vertex,int],None],display_duration:float,segments:int=1000,layer=1)->int:
+	return add_shape(get_lines_for_advanced_ellipse(center_x,center_y,radius_x,radius_y,color,center_color,vertex_modifier,segments),display_duration,layer)
+
+
+
+
+
 class MouseObject:
 	def __init__(self,mouse:dict):
 		self.x=mouse["x"]
@@ -1070,6 +1377,7 @@ def argb(a:int,r:int,g:int,b:int)->int:
 	:param b: Blue value of the color.
 	:return: Minecraft color with the a, r, g, b values.
 	"""
+	# a,r,g,b=round(a),round(r),round(g),round(b)
 	if (a>255 or a<0 or r>255 or r<0 or g>255 or g<0 or b>255 or b<0):
 		raise ValueError(f"a,r,g,b values must be between 0 and 255!")
 	value=(a<<24)|(r<<16)|(g<<8)|b

@@ -2,18 +2,22 @@ package net.mb.minescripthud;
 
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import net.mb.minescripthud.util.ShapeGuiElementRenderState;
+import net.mb.minescripthud.util.Vertex;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.Mouse;
 import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.render.RenderTickCounter;
+import net.minecraft.client.gui.ScreenRect;
+import net.minecraft.client.render.*;
+import net.minecraft.client.texture.TextureSetup;
 import net.minecraft.command.argument.ItemStackArgument;
 import net.minecraft.command.argument.ItemStringReader;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
 import net.minecraft.util.Identifier;
 import net.minescript.common.Jsonable;
-import org.joml.Matrix3x2f;
+import org.joml.*;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -66,6 +70,22 @@ public class DrawHelper {
 				.scale((float)scale_x,(float)scale_y)
 				.translate(-cx,-cy)
 				.translate((float) (diff_x-(double)x*((scale_x-1)/scale_x)),(float) (diff_y-(double)y*((scale_y-1)/scale_y)));
+	}
+
+	@SuppressWarnings("unchecked")
+	public void batch_update(List<Map<String, Object>> updates) {
+		for (Map<String, Object> upd:updates) {
+			List<Object> data=(List<Object>)upd.get("data");
+			switch ((String)upd.get("type")) {
+				case "text" -> updateText(((Double)upd.get("id")).intValue(),(String)data.get(0),((Double)data.get(1)).intValue(),((Double)data.get(2)).intValue(),((Double)data.get(3)).intValue(),(boolean)data.get(4),(double)data.get(5),((Double)data.get(6)).intValue(),(double)data.get(7),(double)data.get(8),(double)data.get(9),(double)data.get(10),(double)data.get(11));
+				case "rectangle" -> updateRectangle(((Double)upd.get("id")).intValue(),((Double)data.get(0)).intValue(),((Double)data.get(1)).intValue(),((Double)data.get(2)).intValue(),((Double)data.get(3)).intValue(),((Double)data.get(4)).intValue(),(double)data.get(5),((Double)data.get(6)).intValue());
+				case "gradient_rectangle" -> updateGradientRectangle(((Double)upd.get("id")).intValue(),((Double)data.get(0)).intValue(),((Double)data.get(1)).intValue(),((Double)data.get(2)).intValue(),((Double)data.get(3)).intValue(),((Double)data.get(4)).intValue(),((Double)data.get(5)).intValue(),(double)data.get(6),((Double)data.get(7)).intValue());
+				case "text_with_background" -> updateTextWithBackground(((Double)upd.get("id")).intValue(),(String)data.get(0),((Double)data.get(1)).intValue(),((Double)data.get(2)).intValue(),((Double)data.get(3)).intValue(),((Double)data.get(4)).intValue(),((Double)data.get(5)).intValue(),((Double)data.get(6)).intValue(),(boolean)data.get(7),(double)data.get(8),((Double)data.get(9)).intValue(),(double)data.get(10),(double)data.get(11),(double)data.get(12),(double)data.get(13),(double)data.get(14));
+				case "item" -> updateItem(((Double)upd.get("id")).intValue(),(String)data.get(0),((Double)data.get(1)).intValue(),((Double)data.get(2)).intValue(),(double)data.get(3),((Double)data.get(4)).intValue(),(double)data.get(5),(double)data.get(6),(double)data.get(7),(double)data.get(8),(double)data.get(9));
+				case "texture" -> updateTexture(((Double)upd.get("id")).intValue(),(String)data.get(0),(boolean)data.get(1),((Double)data.get(2)).intValue(),((Double)data.get(3)).intValue(),((Double)data.get(4)).intValue(),((Double)data.get(5)).intValue(),(double)data.get(6),(double)data.get(7),((Double)data.get(8)).intValue(),(double)data.get(9),(double)data.get(10),(double)data.get(11),(double)data.get(12),(double)data.get(13));
+				case "shape" -> updateShape(((Double)upd.get("id")).intValue(),(List<Map<String,Double>>)data.get(0),(double)data.get(1),((Double)data.get(2)).intValue(),(double)data.get(3),(double)data.get(4),(double)data.get(5),(double)data.get(6),(double)data.get(7));
+			}
+		}
 	}
 
 
@@ -234,6 +254,33 @@ public class DrawHelper {
 
 
 
+	public int addShape(List<Map<String, Double>> vertices, double displayDuration, int layer) {
+		List<Vertex> verticesFormated=vertices.stream().map(v -> new Vertex(v.get("x").intValue(),v.get("y").intValue(),v.get("color").intValue())).toList();
+		int i=this.getId();
+		elements.put(i, new ShapeObject(verticesFormated, displayDuration, layer));
+		return i;
+	}
+
+	public int addAdvancedShape(List<Map<String, Double>> vertices, double displayDuration, int layer, double scale_x, double scale_y, double rotation, double diff_x, double diff_y) {
+		List<Vertex> verticesFormated=vertices.stream().map(v -> new Vertex(v.get("x").intValue(),v.get("y").intValue(),v.get("color").intValue())).toList();
+		int i=this.getId();
+		elements.put(i, new ShapeObject(verticesFormated, displayDuration, layer,scale_x,scale_y,rotation,diff_x,diff_y));
+		return i;
+	}
+
+	public JsonableShapeObject getShapeObject(int id) {
+		return new JsonableShapeObject((ShapeObject) elements.get(id));
+	}
+
+	public void updateShape(int id, List<Map<String, Double>> vertices, double displayDurationModifier, int layer, double scale_x, double scale_y, double rotation, double diff_x, double diff_y) {
+		List<Vertex> verticesFormated=vertices.stream().map(v -> new Vertex(v.get("x").intValue(),v.get("y").intValue(),v.get("color").intValue())).toList();
+		elementUpdates.put(id,new ShapeObjectUpdate(verticesFormated,displayDurationModifier,layer,scale_x,scale_y,rotation,diff_x,diff_y));
+	}
+
+
+
+
+
 	public void tick(RenderTickCounter renderTickCounter) {
 		float deltaSeconds = renderTickCounter.getDynamicDeltaTicks()/20.0f;
 
@@ -277,6 +324,8 @@ public class DrawHelper {
 				context.drawItem(i.getItem(),i.getX(),i.getY());
 			case TextureObject t ->
 				context.drawGuiTexture(RenderPipelines.GUI_TEXTURED,t.getTexture(),t.getX(),t.getY(),t.getWidth(),t.getHeight(),t.getAlpha());
+			case ShapeObject s ->
+					context.state.addSimpleElement(new ShapeGuiElementRenderState(RenderPipelines.GUI, TextureSetup.empty(), new Matrix3x2f(context.getMatrices()), s.getVertices(), context.scissorStack.peekLast(), s.getBounds()));
 			default -> throw new IllegalStateException("Unexpected value: " + element);
 		}
 	}
@@ -810,156 +859,6 @@ public class DrawHelper {
 
 		public void setEndColor(int newEndColor) {
 			endColor=newEndColor;
-		}
-
-		@Override
-		public int getLayer() {
-			return layer;
-		}
-
-		@Override
-		public void setLayer(int newLayer) {
-			layer=newLayer;
-		}
-
-		@Override
-		public Matrix3x2f getMatrix() {
-			return new Matrix3x2f();
-		}
-
-		@Override
-		public void setMatrix(Matrix3x2f newMatrix) {}
-
-		@Override
-		public Map<String, Double> getMatrixInfo() {
-			return Map.of();
-		}
-
-		@Override
-		public double getDisplayDuration() {
-			return displayDuration;
-		}
-
-		@Override
-		public void setDisplayDuration(double newDisplayDuration) {
-			displayDuration=newDisplayDuration;
-		}
-	}
-
-	public static class JsonableStrokedRectangleObject extends Jsonable {
-		public int x;
-		public int y;
-		public int width;
-		public int height;
-		public int color;
-		public double displayDuration;
-		public int layer;
-
-		public JsonableStrokedRectangleObject(StrokedRectangleObject from) {
-			if (Objects.isNull(from)) {
-				return;
-			}
-			this.x=from.getX();
-			this.y=from.getY();
-			this.width=from.getWidth();
-			this.height=from.getHeight();
-			this.color=from.getColor();
-			this.displayDuration=from.getDisplayDuration();
-			this.layer=from.getLayer();
-		}
-	}
-
-	public static class StrokedRectangleObjectUpdate implements LayeredUpdate {
-		private final int x;
-		private final int y;
-		private final int ex;
-		private final int ey;
-		private final int color;
-		public double displayDurationModifier;
-		private final int layer;
-		public StrokedRectangleObjectUpdate(int x, int y, int ex, int ey, int color, double displayDurationModifier, int layer) {
-			this.x=x;
-			this.y=y;
-			this.ex=ex;
-			this.ey=ey;
-			this.color=color;
-			this.displayDurationModifier=displayDurationModifier;
-			this.layer=layer;
-		}
-
-		@Override
-		public void applyTo(Layered target) {
-			if (Objects.isNull(target)) {
-				return;
-			}
-			StrokedRectangleObject to=(StrokedRectangleObject)target;
-			to.setX(this.x);
-			to.setY(this.y);
-			to.setWidth(this.ex);
-			to.setHeight(this.ey);
-			to.setColor(this.color);
-			to.setDisplayDuration(to.getDisplayDuration()+this.displayDurationModifier);
-			to.setLayer(this.layer);
-		}
-	}
-
-	public static class StrokedRectangleObject implements Layered {
-		private int x;
-		private int y;
-		private int width;
-		private int height;
-		private int color;
-		private double displayDuration;
-		private int layer;
-
-		public StrokedRectangleObject(int x, int y, int width, int height, int color, double displayDuration, int layer) {
-			this.x=x;
-			this.y=y;
-			this.width=width;
-			this.height=height;
-			this.color=color;
-			this.displayDuration=displayDuration;
-			this.layer=layer;
-		}
-
-		public int getX() {
-			return x;
-		}
-
-		public void setX(int newX) {
-			x=newX;
-		}
-
-		public int getY() {
-			return y;
-		}
-
-		public void setY(int newY) {
-			y=newY;
-		}
-
-		public int getWidth() {
-			return width;
-		}
-
-		public void setWidth(int newWidth) {
-			width=newWidth;
-		}
-
-		public int getHeight() {
-			return height;
-		}
-
-		public void setHeight(int newHeight) {
-			height=newHeight;
-		}
-
-		public int getColor() {
-			return color;
-		}
-
-		public void setColor(int newColor) {
-			color=newColor;
 		}
 
 		@Override
@@ -1558,6 +1457,152 @@ public class DrawHelper {
 
 		public void setAlpha(float newAlpha) {
 			alpha=newAlpha;
+		}
+
+		@Override
+		public int getLayer() {
+			return layer;
+		}
+
+		@Override
+		public void setLayer(int newLayer) {
+			layer=newLayer;
+		}
+
+		@Override
+		public Matrix3x2f getMatrix() {
+			return matrix;
+		}
+
+		@Override
+		public void setMatrix(Matrix3x2f newMatrix) {
+			matrix=newMatrix;
+		}
+
+		@Override
+		public Map<String, Double> getMatrixInfo() {
+			return matrix_info;
+		}
+
+		@Override
+		public double getDisplayDuration() {
+			return displayDuration;
+		}
+
+		@Override
+		public void setDisplayDuration(double newDisplayDuration) {
+			displayDuration=newDisplayDuration;
+		}
+	}
+
+
+
+
+
+	public static class JsonableShapeObject extends Jsonable {
+		public List<Map<String, Integer>> vertices;
+		public double displayDuration;
+		public int layer;
+		public double scale_x;
+		public double scale_y;
+		public double rotation;
+		public double diff_x;
+		public double diff_y;
+		public JsonableShapeObject(ShapeObject from) {
+			if (Objects.isNull(from)) {
+				return;
+			}
+			this.vertices=from.getVertices().stream().map(v -> Map.of("x",v.x(),"y",v.y(),"color",v.color())).toList();
+			this.scale_x=from.getMatrixInfo().get("scale_x");
+			this.scale_y=from.getMatrixInfo().get("scale_y");
+			this.rotation=from.getMatrixInfo().get("rotation");
+			this.diff_x=from.getMatrixInfo().get("diff_x");
+			this.diff_y=from.getMatrixInfo().get("diff_y");
+			this.displayDuration=from.getDisplayDuration();
+			this.layer=from.getLayer();
+		}
+	}
+
+	public static class ShapeObjectUpdate implements LayeredUpdate {
+		private final List<Vertex> vertices;
+		private final double displayDurationModifier;
+		private final int layer;
+		private final double scale_x;
+		private final double scale_y;
+		private final double rotation;
+		private final double diff_x;
+		private final double diff_y;
+		public ShapeObjectUpdate(List<Vertex> vertices, double displayDurationModifier, int layer, double scale_x, double scale_y, double rotation, double diff_x, double diff_y) {
+			this.vertices=vertices;
+			this.displayDurationModifier=displayDurationModifier;
+			this.layer=layer;
+			this.scale_x=scale_x;this.scale_y=scale_y;this.rotation=rotation;this.diff_x=diff_x;this.diff_y=diff_y;
+		}
+
+		@Override
+		public void applyTo(Layered target) {
+			if (Objects.isNull(target)) {
+				return;
+			}
+			ShapeObject to=(ShapeObject)target;
+			to.setVertices(vertices);
+			to.updateBounds();
+			to.setDisplayDuration(to.getDisplayDuration()+displayDurationModifier);
+			to.setLayer(this.layer);
+			to.getMatrixInfo().put("scale_x",this.scale_x);to.getMatrixInfo().put("scale_y",this.scale_y);to.getMatrixInfo().put("rotation",this.rotation);to.getMatrixInfo().put("diff_x",this.diff_x);to.getMatrixInfo().put("diff_y",this.diff_y);
+			to.setMatrix(DrawHelper.createMatrx(to.getBounds().getLeft(),to.getBounds().getTop(),to.getBounds().width(),to.getBounds().height(),scale_x,scale_y,rotation,diff_x,diff_y));
+		}
+	}
+
+	public static class ShapeObject implements Layered {
+		private List<Vertex> vertices;
+		private ScreenRect bounds;
+		private double displayDuration;
+		private final Map<String, Double> matrix_info=new HashMap<>();
+		private Matrix3x2f matrix;
+		private int layer;
+		public ShapeObject(List<Vertex> vertices, double displayDuration, int layer) {
+			this.vertices=vertices;
+			this.bounds=this.createBounds();
+			this.displayDuration=displayDuration;
+			this.matrix_info.put("scale_x",1d);this.matrix_info.put("scale_y",1d);this.matrix_info.put("rotation",0d);this.matrix_info.put("diff_x",0d);this.matrix_info.put("diff_y",0d);
+			this.matrix=new Matrix3x2f();
+			this.layer=layer;
+		}
+		public ShapeObject(List<Vertex> vertices, double displayDuration, int layer, double scale_x, double scale_y, double rotation, double diff_x, double diff_y) {
+			this.vertices=vertices;
+			this.bounds=this.createBounds();
+			this.displayDuration=displayDuration;
+			this.matrix_info.put("scale_x",scale_x);this.matrix_info.put("scale_y",scale_y);this.matrix_info.put("rotation",rotation);this.matrix_info.put("diff_x",diff_x);this.matrix_info.put("diff_y",diff_y);
+			this.matrix=DrawHelper.createMatrx(bounds.getLeft(),bounds.getTop(),bounds.width(),bounds.height(),scale_x,scale_y,rotation,diff_x,diff_y);
+			this.layer=layer;
+		}
+
+		private ScreenRect createBounds() {
+			int left=Integer.MAX_VALUE,right=0,top=Integer.MAX_VALUE,bottom=0;
+			for (Vertex v:vertices) {
+				if (v.x()>right) right=v.x();
+				if (v.x()<left) left=v.x();
+				if (v.y()>bottom) bottom=v.y();
+				if (v.y()<top) top=v.y();
+			}
+			return new ScreenRect(left,top,right-left,bottom-top);
+		}
+
+		public List<Vertex> getVertices() {
+			return vertices;
+		}
+
+		public void setVertices(List<Vertex> newVertices) {
+			vertices=newVertices;
+		}
+
+		public ScreenRect getBounds() {
+			return bounds;
+		}
+
+		public void updateBounds() {
+			bounds=this.createBounds();
 		}
 
 		@Override

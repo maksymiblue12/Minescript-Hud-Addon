@@ -20,7 +20,7 @@ This mod adds the ability to draw custom HUD elements in [Minescript](https://mo
 <br></br>
 ## Example
 ```python
-from draw_text import *
+from hud_renderer import *
 
 add_text("Hello World",x=10,y=10,color=argb(255,255,255,255),shadow=True,display_duration=5)
 ```
@@ -28,7 +28,7 @@ add_text("Hello World",x=10,y=10,color=argb(255,255,255,255),shadow=True,display
 ## Animations
 All HUD elements can be animated using animation functions.
 ```python
-from draw_text import *
+from hud_renderer import *
 
 def move(text:TextObject):
     text.x+=1

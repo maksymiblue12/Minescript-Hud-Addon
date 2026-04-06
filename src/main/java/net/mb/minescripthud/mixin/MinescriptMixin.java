@@ -16,10 +16,13 @@ import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
+import java.util.Map;
 
 @Mixin(Minescript.class)
 public class MinescriptMixin {
     @Inject(method = "runScriptFunction",at=@At("HEAD"),cancellable = true)
+	@SuppressWarnings("unchecked")
     private static void runScriptFunction(JobControl job, long funcCallId, ScriptFunctionCall functionCall, CallbackInfoReturnable<ScriptValue> cir) {
         String name = functionCall.name();
         ScriptFunctionCall.ArgList args = functionCall.args();
@@ -174,6 +177,40 @@ public class MinescriptMixin {
 
 
 
+			case "add_shape" -> {
+				args.expectSize(3);
+				int id=DrawHelper.getInstance().addShape((List<Map<String, Double>>)args.get(0), args.getDouble(1), args.getStrictInt(2));
+				cir.setReturnValue(ScriptValue.of(id));
+				cir.cancel();
+			}
+			case "add_advanced_shape" -> {
+				args.expectSize(13);
+				int id=DrawHelper.getInstance().addAdvancedShape((List<Map<String, Double>>)args.get(0), args.getDouble(1), args.getStrictInt(2), args.getDouble(3), args.getDouble(4), args.getDouble(5), args.getDouble(6), args.getDouble(7));
+				cir.setReturnValue(ScriptValue.of(id));
+				cir.cancel();
+			}
+			case "get_shape_object" -> {
+				args.expectSize(1);
+				cir.setReturnValue(ScriptValue.of(DrawHelper.getInstance().getShapeObject(args.getStrictInt(0))));
+				cir.cancel();
+			}
+			case "update_shape" -> {
+				args.expectSize(9);
+				DrawHelper.getInstance().updateShape(args.getStrictInt(0), (List<Map<String, Double>>)args.get(1), args.getDouble(2), args.getStrictInt(3), args.getDouble(4), args.getDouble(5), args.getDouble(6), args.getDouble(7), args.getDouble(8));
+				cir.setReturnValue(ScriptValue.TRUE);
+				cir.cancel();
+			}
+
+
+
+
+
+			case "batch_update" -> {
+				args.expectSize(1);
+				DrawHelper.getInstance().batch_update((List<Map<String, Object>>)args.get(0));
+				cir.setReturnValue(ScriptValue.TRUE);
+				cir.cancel();
+			}
 			case "remove_element" -> {
 				args.expectSize(1);
 				DrawHelper.getInstance().removeElement(args.getStrictInt(0));
@@ -283,7 +320,7 @@ public class MinescriptMixin {
 
 	@Inject(method="loadMinescriptResources",at=@At("TAIL"))
 	private static void loadMinescriptResources(CallbackInfo ci) {
-		copyJarResourceToFile("system/lib/draw_text.py",Paths.get("minescript", "system", "lib"));
+		copyJarResourceToFile("system/lib/hud_renderer.py",Paths.get("minescript", "system", "lib"));
 		copyJarResourceToFile("system/exec/clear_screen.py",Paths.get("minescript", "system", "exec"));
 	}
 }
