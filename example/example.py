@@ -1,4 +1,4 @@
-from system.lib.draw_text import *
+from system.lib.hud_renderer import *
 from math import radians
 
 clear()

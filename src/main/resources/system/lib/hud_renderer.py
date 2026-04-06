@@ -1,5 +1,7 @@
 from colorsys import rgb_to_hsv,hsv_to_rgb
+from minescript_runtime import ScriptFunction
 from collections.abc import Callable
+from math import radians,sin,cos,ceil,hypot
 
 
 class Colors:
@@ -38,7 +40,6 @@ class Colors:
 	LIGHT_PINK=-13108
 	#: Lighter gray color.
 	LIGHTER_GRAY=-2039584
-
 
 # noinspection PyUnresolvedReferences
 class Matrix:
@@ -121,6 +122,87 @@ class Identifier:
 
 	def to_list(self)->list:
 		return [self.path,self.vanilla]
+
+class Vertex:
+	def __init__(self,x:int,y:int,color:int):
+		self.x=x
+		self.y=y
+		self.color=color
+
+	def to_dict(self)->dict:
+		return {"x":self.x,"y":self.y,"color":self.color}
+
+class Line:
+	def __init__(self,start:Vertex,end:Vertex):
+		self.start=start
+		self.end=end
+
+	def to_list(self)->list:
+		return [self.start.to_dict(),self.end.to_dict()]\
+
+def update_batch(data):
+	return (data,)
+update_batch=ScriptFunction("batch_update",update_batch)
+
+class BatchAnimator:
+	def __init__(self):
+		self.animations=[]
+
+	def animate_text(self,_id,func):
+		self.animations.append({"id":_id,"func":func,"type":"text","update_func":update_text,"object_type":TextObject,"object":None})
+		return self
+
+	def animate_rectangle(self,_id,func):
+		self.animations.append({"id":_id,"func":func,"type":"rectangle","update_func":update_rectangle,"object_type":RectangleObject,"object":None})
+		return self
+
+	def animate_gradient_rectangle(self,_id,func):
+		self.animations.append({"id":_id,"func":func,"type":"gradient_rectangle","update_func":update_gradient_rectangle,"object_type":GradientRectangleObject,"object":None})
+		return self
+
+	def animate_stroked_rectangle(self,_id,func):
+		self.animations.append({"id":_id,"func":func,"type":"stroked_rectangle","update_func":update_stroked_rectangle,"object_type":StrokedRectangleObject,"object":None})
+		return self
+
+	def animate_text_with_background(self,_id,func):
+		self.animations.append({"id":_id,"func":func,"type":"text_with_background","update_func":update_text_with_background,"object_type":TextWithBackgroundObject,"object":None})
+		return self
+
+	def animate_item(self,_id,func):
+		self.animations.append({"id":_id,"func":func,"type":"item","update_func":update_item,"object_type":ItemObject,"object":None})
+		return self
+
+	def animate_texture(self,_id,func):
+		self.animations.append({"id":_id,"func":func,"type":"texture","update_func":update_texture,"object_type":TextureObject,"object":None})
+		return self
+
+	def animate_shape(self,_id,func):
+		self.animations.append({"id":_id,"func":func,"type":"shape","update_func":update_shape,"object_type":ShapeObject,"object":None})
+		return self
+
+	def start(self):
+		while (len(self.animations)>0):
+			data=[]
+			for anim in self.animations:
+				_id,func,update_func,obj=anim["id"],anim["func"],anim["update_func"],anim["object"]
+				if (not still_exists(_id)):
+					continue
+				if (obj is None):
+					obj=anim["object_type"](_id)
+					anim["object"]=obj
+				if (not obj.update(_id)):
+					continue
+				func(obj)
+				l=obj.to_list()
+				if (any(x is None for x in l)): continue
+				for i in range(len(l)):
+					if (hasattr(l[i],"to_list")):
+						l[i:i+1]=l[i].to_list()
+				data.append({"id":_id,"type":anim["type"],"data":l})
+				# update_func(_id,*l)
+			update_batch(data)
+			self.animations=[a for a in self.animations if still_exists(a["id"])]
+			wait_next_frame()
 
 
 
@@ -225,6 +307,7 @@ def add_text(text:str,x:int,y:int,color:int,shadow:bool,display_duration:float,l
 	:return: ID of the created element.
 	"""
 	return (text,x,y,color,shadow,display_duration,layer)
+add_text=ScriptFunction("add_text",add_text)
 
 # noinspection PyTypeChecker
 def add_advanced_text(text:str,x:int,y:int,color:int,shadow:bool,display_duration:float,layer:int,matrix:Matrix)->int:
@@ -245,13 +328,16 @@ def add_advanced_text(text:str,x:int,y:int,color:int,shadow:bool,display_duratio
 	:return: ID of the created element.
 	"""
 	return (text,x,y,color,shadow,display_duration,layer,*matrix.to_list())
+add_advanced_text=ScriptFunction("add_advanced_text",add_advanced_text)
 
 # noinspection PyTypeChecker
 def get_text_object(_id:int)->dict:
 	return (_id,)
+get_text_object=ScriptFunction("get_text_object",get_text_object)
 
 def update_text(_id:int,text:str,x:int,y:int,color:int,shadow:bool,display_duration:float,layer:int,matrix:Matrix):
 	return (_id,text,x,y,color,shadow,display_duration,layer,*matrix.to_list())
+update_text=ScriptFunction("update_text",update_text)
 
 def _animate_text(_id:int,func:Callable[[TextObject], None])->None:
 	t=TextObject(_id)
@@ -363,6 +449,7 @@ def add_rectangle(sx:int,sy:int,w:int,h:int,color:int,display_duration:float,lay
 	:return: ID of the created element.
 	"""
 	return (sx,sy,sx+w,sy+h,color,display_duration,layer)
+add_rectangle=ScriptFunction("add_rectangle",add_rectangle)
 
 # noinspection PyTypeChecker
 def add_rectangle_from_corners(sx:int,sy:int,ex:int,ey:int,color:int,display_duration:float,layer:int=1)->int:
@@ -379,13 +466,16 @@ def add_rectangle_from_corners(sx:int,sy:int,ex:int,ey:int,color:int,display_dur
 	:return: ID of the created element.
 	"""
 	return (sx,sy,ex,ey,color,display_duration,layer)
+add_rectangle_from_corners=ScriptFunction("add_rectangle_from_corners",add_rectangle_from_corners)
 
 # noinspection PyTypeChecker
 def get_rectangle_object(_id:int)->dict:
 	return (_id,)
+get_rectangle_object=ScriptFunction("get_rectangle_object",get_rectangle_object)
 
 def update_rectangle(_id:int,sx:int,sy:int,ex:int,ey:int,color:int,display_duration:float,layer:int):
 	return (_id,sx,sy,ex,ey,color,display_duration,layer)
+update_rectangle=ScriptFunction("update_rectangle",update_rectangle)
 
 def _animate_rectangle(_id:int,func:Callable[[RectangleObject],None])->None:
 	b=RectangleObject(_id)
@@ -491,13 +581,16 @@ def add_gradient_rectangle(sx:int,sy:int,w:int,h:int,start_color:int,end_color:i
 	:return: ID of the created element.
 	"""
 	return (sx,sy,sx+w,sy+h,start_color,end_color,display_duration,layer)
+add_gradient_rectangle=ScriptFunction("add_gradient_rectangle",add_gradient_rectangle)
 
 # noinspection PyTypeChecker
 def get_gradient_rectangle_object(_id:int)->dict:
 	return (_id,)
+get_gradient_rectangle_object=ScriptFunction("get_gradient_rectangle_object",get_gradient_rectangle_object)
 
 def update_gradient_rectangle(_id:int,sx:int,sy:int,ex:int,ey:int,start_color:int,end_color:int,display_duration:float,layer:int):
 	return (_id,sx,sy,ex,ey,start_color,end_color,display_duration,layer)
+update_gradient_rectangle=ScriptFunction("update_gradient_rectangle",update_gradient_rectangle)
 
 def _animate_gradient_rectangle(_id:int,func:Callable[[GradientRectangleObject],None])->None:
 	b=GradientRectangleObject(_id)
@@ -599,13 +692,16 @@ def add_stroked_rectangle(x:int,y:int,w:int,h:int,color:int,display_duration:flo
 	:return: ID of the created element.
 	"""
 	return (x,y,w,h,color,display_duration,layer)
+add_stroked_rectangle=ScriptFunction("add_stroked_rectangle",add_stroked_rectangle)
 
 # noinspection PyTypeChecker
 def get_stroked_rectangle_object(_id:int)->dict:
 	return (_id,)
+get_stroked_rectangle_object=ScriptFunction("get_stroked_rectangle_object",get_stroked_rectangle_object)
 
 def update_stroked_rectangle(_id:int,x:int,y:int,w:int,h:int,color:int,display_duration:float,layer:int):
 	return (_id,x,y,w,h,color,display_duration,layer)
+update_stroked_rectangle=ScriptFunction("update_stroked_rectangle",update_stroked_rectangle)
 
 def _animate_stroked_rectangle(_id:int,func:Callable[[StrokedRectangleObject],None])->None:
 	b=StrokedRectangleObject(_id)
@@ -756,6 +852,7 @@ def add_text_with_background(text:str,x:int,y:int,margin_x:int,margin_y:int,colo
 	:return: ID of the created element.
 	"""
 	return (text,x,y,margin_x,margin_y,color,bg_color,shadow,display_duration,layer)
+add_text_with_background=ScriptFunction("add_text_with_background",add_text_with_background)
 
 # noinspection PyTypeChecker
 def add_advanced_text_with_background(text:str,x:int,y:int,margin_x:int,margin_y:int,color:int,bg_color:int,shadow:bool,display_duration:float,layer:int,matrix:Matrix)->int:
@@ -779,13 +876,16 @@ def add_advanced_text_with_background(text:str,x:int,y:int,margin_x:int,margin_y
 	:return: ID of the created element.
 	"""
 	return (text,x,y,margin_x,margin_y,color,bg_color,shadow,display_duration,layer,*matrix.to_list())
+add_advanced_text_with_background=ScriptFunction("add_advanced_text_with_background",add_advanced_text_with_background)
 
 # noinspection PyTypeChecker
 def get_text_with_background_object(_id:int)->dict:
 	return (_id,)
+get_text_with_background_object=ScriptFunction("get_text_with_background_object",get_text_with_background_object)
 
 def update_text_with_background(_id:int,text:str,x:int,y:int,margin_x:int,margin_y:int,color:int,bg_color:int,shadow:bool,display_duration:float,layer:int,matrix:Matrix):
 	return (_id,text,x,y,margin_x,margin_y,color,bg_color,shadow,display_duration,layer,*matrix.to_list())
+update_text_with_background=ScriptFunction("update_text_with_background",update_text_with_background)
 
 def _animate_text_with_background(_id:int,func:Callable[[TextWithBackgroundObject],None])->None:
 	t=TextWithBackgroundObject(_id)
@@ -886,6 +986,7 @@ def add_item(item:str,x:int,y:int,display_duration:float,layer:int=1)->int:
 	:return: ID of the created element.
 	"""
 	return (item,x,y,display_duration,layer)
+add_item=ScriptFunction("add_item",add_item)
 
 # noinspection PyTypeChecker
 def add_advanced_item(item:str,x:int,y:int,display_duration:float,layer:int,matrix:Matrix)->int:
@@ -904,13 +1005,16 @@ def add_advanced_item(item:str,x:int,y:int,display_duration:float,layer:int,matr
 	:return: ID of the created element.
 	"""
 	return (item,x,y,display_duration,layer,*matrix.to_list())
+add_advanced_item=ScriptFunction("add_advanced_item",add_advanced_item)
 
 # noinspection PyTypeChecker
 def get_item_object(_id:int)->dict:
 	return (_id,)
+get_item_object=ScriptFunction("get_item_object",get_item_object)
 
 def update_item(_id:int,item:str,x:int,y:int,display_duration:float,layer:int,matrix:Matrix):
 	return (_id,item,x,y,display_duration,layer,*matrix.to_list())
+update_item=ScriptFunction("update_item",update_item)
 
 def _animate_item(_id:int,func:Callable[[ItemObject],None])->None:
 	t=ItemObject(_id)
@@ -1034,6 +1138,7 @@ def add_texture(texture:Identifier,x:int,y:int,width:int,height:int,alpha:float,
 	:return: ID of the created element.
 	"""
 	return (*texture.to_list(),x,y,width,height,alpha,display_duration,layer)
+add_texture=ScriptFunction("add_texture",add_texture)
 
 # noinspection PyTypeChecker
 def add_advanced_texture(texture:Identifier,x:int,y:int,width:int,height:int,alpha:float,display_duration:float,layer:int,matrix:Matrix)->int:
@@ -1057,13 +1162,16 @@ def add_advanced_texture(texture:Identifier,x:int,y:int,width:int,height:int,alp
 	:return: ID of the created element.
 	"""
 	return (*texture.to_list(),x,y,width,height,alpha,display_duration,layer,*matrix.to_list())
+add_advanced_texture=ScriptFunction("add_advanced_texture",add_advanced_texture)
 
 # noinspection PyTypeChecker
 def get_texture_object(_id:int)->dict:
 	return (_id,)
+get_texture_object=ScriptFunction("get_texture_object",get_texture_object)
 
 def update_texture(_id:int,texture:Identifier,x:int,y:int,width:int,height:int,alpha:float,display_duration:float,layer:int,matrix:Matrix):
 	return (_id,*texture.to_list(),x,y,width,height,alpha,display_duration,layer,*matrix.to_list())
+update_texture=ScriptFunction("update_texture",update_texture)
 
 def _animate_texture(_id:int,func:Callable[[TextureObject],None])->None:
 	t=TextureObject(_id)
@@ -1096,6 +1204,237 @@ def modify_texture(_id:int,func:Callable[[TextureObject],None])->None:
 		if (t.update(_id)):
 			func(t)
 			update_texture(_id,*t.to_list())
+
+
+
+
+
+class ShapeObject(BaseObject):
+	# noinspection PyMissingConstructor
+	def __init__(self,_id:int):
+		self.update(_id)
+
+	@property
+	def display_duration(self):
+		return self._display_duration
+
+	# noinspection PyAttributeOutsideInit
+	def update(self,_id:int):
+		info=get_shape_object(_id)
+		if (info is None or any(map(lambda x:x is None,info.values()))):
+			return False
+		self.lines=[]
+		vertices=list(map(lambda v:Vertex(v["x"],v["y"],v["color"]),info["vertices"]))
+		if (len(vertices)%2!=0):
+			raise ValueError("Internal error, shape object has odd number of vertices!")
+		for i in range(0,len(vertices),2):
+			self.lines.append(Line(vertices[i],vertices[i+1]))
+		self._display_duration:float=info["displayDuration"]
+		self.display_duration_modifier:float=0
+		self.layer:int=info["layer"]
+		self.matrix=Matrix.from_dict(info)
+		return True
+
+	def to_list(self)->list:
+		return [self.lines,self.display_duration_modifier,self.layer,self.matrix]
+
+def add_shape(lines:list[Line],display_duration:float,layer:int=1)->int:
+	out=[]
+	for l in lines: out.extend(l.to_list())
+	return (out,display_duration,layer)
+add_shape=ScriptFunction("add_shape",add_shape)
+
+def add_advanced_shape(lines:list[Line],display_duration:float,layer:int,matrix:Matrix)->int:
+	out=[]
+	for l in lines: out.extend(l.to_list())
+	return (out,display_duration,layer,*matrix.to_list())
+add_advanced_shape=ScriptFunction("add_advanced_shape",add_advanced_shape)
+
+# noinspection PyTypeChecker
+def get_shape_object(_id:int)->dict:
+	return (_id,)
+get_shape_object=ScriptFunction("get_shape_object",get_shape_object)
+
+def update_shape(_id:int,lines:list[Line],display_duration:float,layer:int,matrix:Matrix):
+	out=[]
+	for l in lines: out.extend(l.to_list())
+	return (_id,out,display_duration,layer,*matrix.to_list())
+update_shape=ScriptFunction("update_shape",update_shape)
+
+def _animate_shape(_id:int,func:Callable[[ShapeObject],None])->None:
+	s=ShapeObject(_id)
+	while (still_exists(_id)):
+		if (s.update(_id)):
+			func(s)
+			l=s.to_list()
+			if (any(map(lambda x:(x is None),l))): return
+			update_shape(_id,*l)
+			wait_next_frame()
+
+def animate_shape(_id:int,func:Callable[[ShapeObject],None])->None:
+	_animate_shape(_id,func)
+
+def modify_shape(_id:int,func:Callable[[ShapeObject],None])->None:
+	s=ShapeObject(_id)
+	if (still_exists(_id)):
+		if (s.update(_id)):
+			func(s)
+			update_shape(_id,*s.to_list())
+
+
+def get_lines_for_triangle(v1:Vertex,v2:Vertex,v3:Vertex)->list[Line]:
+	return [Line(v1,v2),Line(v2,v3)]
+
+def add_triangle(p1:tuple[int,int],p2:tuple[int,int],p3:tuple[int,int],color:int,display_duration:float,layer:int=1)->int:
+	return add_shape(get_lines_for_triangle(Vertex(*p1,color),Vertex(*p2,color),Vertex(*p3,color)),display_duration,layer)
+
+def add_line(start:tuple[int,int],end:tuple[int,int],width:int,color:int,display_duration:float,layer:int=1)->int:
+	start_x,start_y=start;end_x,end_y=end
+	dx=end_x-start_x
+	dy=end_y-start_y
+	length=hypot(dx,dy)
+	wx=dy/length*ceil(width/2)
+	wy=-dx/length*ceil(width/2)
+	v1=Vertex(start_x+wx,start_y+wy,color)
+	v2=Vertex(start_x-wx,start_y-wy,color)
+	v3=Vertex(end_x-wx,end_y-wy,color)
+	v4=Vertex(end_x+wx,end_y+wy,color)
+	return add_shape(get_lines_for_triangle(v1,v2,v3)+get_lines_for_triangle(v1,v3,v4),display_duration,layer)
+
+def add_multiline(points:list[tuple[int,int]],width:int,color:int,display_duration:float,layer:int=1)->int:
+	lines=[]
+	for i in range(1,len(points)):
+		start_x,start_y=points[i-1];end_x,end_y=points[i]
+		dx=end_x-start_x
+		dy=end_y-start_y
+		length=hypot(dx,dy)
+		wx=dy/length*ceil(width/2)
+		wy=-dx/length*ceil(width/2)
+		v1=Vertex(start_x+wx,start_y+wy,color)
+		v2=Vertex(start_x-wx,start_y-wy,color)
+		v3=Vertex(end_x-wx,end_y-wy,color)
+		v4=Vertex(end_x+wx,end_y+wy,color)
+		lines+=get_lines_for_triangle(v1,v2,v3)+get_lines_for_triangle(v1,v3,v4)
+	return add_shape(lines,display_duration,layer)
+
+def add_advanced_multiline(points:list[tuple[int,int,int]],width:int,display_duration:float,layer:int=1)->int:
+	lines=[]
+	for i in range(1,len(points)):
+		start_x,start_y,start_color=points[i-1];end_x,end_y,end_color=points[i]
+		dx=end_x-start_x
+		dy=end_y-start_y
+		length=hypot(dx,dy)
+		wx=dy/length*ceil(width/2)
+		wy=-dx/length*ceil(width/2)
+		v1=Vertex(start_x+wx,start_y+wy,start_color)
+		v2=Vertex(start_x-wx,start_y-wy,start_color)
+		v3=Vertex(end_x-wx,end_y-wy,end_color)
+		v4=Vertex(end_x+wx,end_y+wy,end_color)
+		lines+=get_lines_for_triangle(v1,v2,v3)+get_lines_for_triangle(v1,v3,v4)
+	return add_shape(lines,display_duration,layer)
+
+def get_lines_for_quad(p1:tuple[int,int],p2:tuple[int,int],p3:tuple[int,int],p4:tuple[int,int],color:int)->list[Line]:
+	if (len({p1,p2,p3,p4})!=4):
+		raise ValueError("Points must be unique!")
+	points=[p1,p2,p3,p4]
+	points.sort(key=lambda p:p[1])
+	tl,tr=((points[0],points[1]) if points[0][0]<points[1][0] else (points[1],points[0]))
+	bl,br=((points[2],points[3]) if points[2][0]<points[3][0] else (points[3],points[2]))
+	tl,tr,bl,br=Vertex(*tl,color),Vertex(*tr,color),Vertex(*bl,color),Vertex(*br,color)
+	return get_lines_for_triangle(tl,bl,br)+get_lines_for_triangle(tl,br,tr)
+
+def add_quad(p1:tuple[int,int],p2:tuple[int,int],p3:tuple[int,int],p4:tuple[int,int],color:int,display_duration:float,layer:int=1)->int:
+	return add_shape(get_lines_for_quad(p1,p2,p3,p4,color),display_duration,layer)
+
+def get_lines_for_circle(center_x:int,center_y:int,radius:int,color:int,segments:int=1000)->list[Line]:
+	last=None
+	first=None
+	center=Vertex(center_x,center_y,color)
+	lines=[]
+	for i in range(segments):
+		a=radians((i/segments)*360)
+		x=center_x+radius*cos(a)
+		y=center_y-radius*sin(a)
+		v=Vertex(x,y,color)
+		if (last is None):
+			last=v
+			first=v
+		else:
+			lines+=get_lines_for_triangle(v,center,last)
+			last=v
+	lines+=get_lines_for_triangle(first,center,last)
+	return lines
+
+def add_circle(center_x:int,center_y:int,radius:int,color:int,display_duration:float,segments:int=1000,layer=1)->int:
+	return add_shape(get_lines_for_circle(center_x,center_y,radius,color,segments),display_duration,layer)
+
+def get_lines_for_advanced_circle(center_x:int,center_y:int,radius:int,color:int,center_color:int,vertex_modifier:Callable[[Vertex,int],None],segments:int=1000)->list[Line]:
+	last=None
+	first=None
+	center=Vertex(center_x,center_y,center_color)
+	lines=[]
+	for i in range(segments):
+		a=radians((i/segments)*360)
+		x=center_x+radius*cos(a)
+		y=center_y-radius*sin(a)
+		v=Vertex(x,y,color)
+		vertex_modifier(v,i)
+		if (last is None):
+			last=v
+			first=v
+		else:
+			lines+=get_lines_for_triangle(v,center,last)
+			last=v
+	lines+=get_lines_for_triangle(first,center,last)
+	return lines
+
+def add_advanced_circle(center_x:int,center_y:int,radius:int,color:int,center_color:int,vertex_modifier:Callable[[Vertex,int],None],display_duration:float,segments:int=1000,layer=1)->int:
+	return add_shape(get_lines_for_advanced_circle(center_x,center_y,radius,color,center_color,vertex_modifier,segments),display_duration,layer)
+
+def get_lines_for_ellipse(center_x:int,center_y:int,radius_x:int,radius_y:int,color:int,segments:int=1000)->list[Line]:
+	last=None
+	first=None
+	center=Vertex(center_x,center_y,color)
+	lines=[]
+	for i in range(segments):
+		a=radians((i/segments)*360)
+		x=center_x+radius_x*cos(a)
+		y=center_y-radius_y*sin(a)
+		v=Vertex(x,y,color)
+		if (last is None):
+			last=v
+			first=v
+		else:
+			lines+=get_lines_for_triangle(v,center,last)
+			last=v
+	lines+=get_lines_for_triangle(first,center,last)
+	return lines
+
+def add_ellipse(center_x:int,center_y:int,radius_x:int,radius_y:int,color:int,display_duration:float,segments:int=1000,layer=1)->int:
+	return add_shape(get_lines_for_ellipse(center_x,center_y,radius_x,radius_y,color,segments),display_duration,layer)
+
+def get_lines_for_advanced_ellipse(center_x:int,center_y:int,radius_x:int,radius_y:int,color:int,center_color:int,vertex_modifier:Callable[[Vertex,int],None],segments:int=1000)->list[Line]:
+	last=None
+	first=None
+	center=Vertex(center_x,center_y,center_color)
+	lines=[]
+	for i in range(segments):
+		a=radians((i/segments)*360)
+		x=center_x+radius_x*cos(a)
+		y=center_y-radius_y*sin(a)
+		v=Vertex(x,y,color)
+		vertex_modifier(v,i)
+		if (last is None):
+			last=v
+			first=v
+		else:
+			lines+=get_lines_for_triangle(v,center,last)
+			last=v
+	lines+=get_lines_for_triangle(first,center,last)
+	return lines
+
+def add_advanced_ellipse(center_x:int,center_y:int,radius_x:int,radius_y:int,color:int,center_color:int,vertex_modifier:Callable[[Vertex,int],None],display_duration:float,segments:int=1000,layer=1)->int:
+	return add_shape(get_lines_for_advanced_ellipse(center_x,center_y,radius_x,radius_y,color,center_color,vertex_modifier,segments),display_duration,layer)
 
 
 
@@ -1154,6 +1493,7 @@ def argb(a:int,r:int,g:int,b:int)->int:
 	:param b: Blue value of the color.
 	:return: Minecraft color with the a, r, g, b values.
 	"""
+	# a,r,g,b=round(a),round(r),round(g),round(b)
 	if (a>255 or a<0 or r>255 or r<0 or g>255 or g<0 or b>255 or b<0):
 		raise ValueError(f"a,r,g,b values must be between 0 and 255!")
 	value=(a<<24)|(r<<16)|(g<<8)|b
@@ -1181,6 +1521,7 @@ def remove_element(_id:int):
 	:param _id: ID of the element to remove.
 	"""
 	return (_id,)
+remove_element=ScriptFunction("remove_element",remove_element)
 
 # noinspection PyTypeChecker
 def still_exists(_id:int)->bool:
@@ -1191,9 +1532,11 @@ def still_exists(_id:int)->bool:
 	:return: ``True`` if the element exists, ``False`` otherwise.
 	"""
 	return (_id,)
+still_exists=ScriptFunction("still_exists",still_exists)
 
 def _get_mouse():
 	return ()
+_get_mouse=ScriptFunction("get_mouse",_get_mouse)
 
 def get_mouse():
 	return MouseObject(_get_mouse())
@@ -1206,18 +1549,22 @@ def get_font_height()->int:
 	:return: Font height.
 	"""
 	return ()
+get_font_height=ScriptFunction("get_font_height",get_font_height)
 
 def clear():
 	"""
 	Removes all elements.
 	"""
 	return ()
+clear=ScriptFunction("clear",clear)
 
 def wait_next_frame():
 	return ()
+wait_next_frame=ScriptFunction("wait_next_frame",wait_next_frame)
 
 def suppress_done_message():
 	"""
 	Removes the ``Done`` message that appears after a script finishes.
 	"""
 	return ()
+suppress_done_message=ScriptFunction("suppress_done_message",suppress_done_message)

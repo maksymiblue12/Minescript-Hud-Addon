@@ -43,5 +43,5 @@ replay_*.log
 
 libs/
 source/
-docs/draw_text.py
+docs/hud_renderer.py
 docs/make_doc_file.py
