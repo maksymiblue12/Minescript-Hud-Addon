@@ -76,7 +76,6 @@ public class DrawHelper {
 	public void batch_update(List<Map<String, Object>> updates) {
 		for (Map<String, Object> upd:updates) {
 			List<Object> data=(List<Object>)upd.get("data");
-			MinescriptHUDAddon.LOGGER.warn(data.toString());
 			switch ((String)upd.get("type")) {
 				case "text" -> updateText(((Double)upd.get("id")).intValue(),(String)data.get(0),((Double)data.get(1)).intValue(),((Double)data.get(2)).intValue(),((Double)data.get(3)).intValue(),(boolean)data.get(4),(double)data.get(5),((Double)data.get(6)).intValue(),(double)data.get(7),(double)data.get(8),(double)data.get(9),(double)data.get(10),(double)data.get(11));
 				case "rectangle" -> updateRectangle(((Double)upd.get("id")).intValue(),((Double)data.get(0)).intValue(),((Double)data.get(1)).intValue(),((Double)data.get(2)).intValue(),((Double)data.get(3)).intValue(),((Double)data.get(4)).intValue(),(double)data.get(5),((Double)data.get(6)).intValue());
