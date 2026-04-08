@@ -143,7 +143,7 @@ class Line:
 
 def update_batch(data):
 	return (data,)
-update_batch=ScriptFunction("batch_update",update_batch)
+update_batch=NoReturnScriptFunction("batch_update",update_batch)
 
 class BatchAnimator:
 	def __init__(self):
