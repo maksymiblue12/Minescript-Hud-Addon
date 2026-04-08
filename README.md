@@ -10,6 +10,7 @@ This mod adds the ability to draw custom HUD elements in [Minescript](https://mo
  - Draw ***rectangles*** and gradient rectangles
  - Render ***items***
  - Render ***textures***
+ - Render ***custom shapes***
  - ***Animate*** all element properties
  - Control ***display duration*** and ***render layers***
 <br></br>
@@ -69,6 +70,17 @@ Elements with higher layer values render above elements with lower layers.
  - `add_texture(...)`
  - `add_advanced_texture(...)`
  - `animate_texture(...)`
+
+### Shapes
+ - `add_shape(...)`
+ - `add_advanced_shape(...)`
+ - `animate_shape(...)`
+ - `add_line(...)`
+ - `add_multiline(...)`
+ - `add_triangle(...)`
+ - `add_quad(...)`
+ - `add_circle(...)`
+ - `add_ellipse(...)`
 
 ### Utility functions
  - `argb(...)`
