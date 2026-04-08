@@ -1,5 +1,5 @@
 from colorsys import rgb_to_hsv,hsv_to_rgb
-from minescript_runtime import ScriptFunction
+from minescript_runtime import ScriptFunction,NoReturnScriptFunction
 from collections.abc import Callable
 from math import radians,sin,cos,ceil,hypot
 
@@ -142,7 +142,7 @@ class Line:
 
 def update_batch(data):
 	return (data,)
-update_batch=ScriptFunction("batch_update",update_batch)
+update_batch=NoReturnScriptFunction("batch_update",update_batch)
 
 class BatchAnimator:
 	def __init__(self):
@@ -332,7 +332,7 @@ get_text_object=ScriptFunction("get_text_object",get_text_object)
 
 def update_text(_id:int,text:str,x:int,y:int,color:int,shadow:bool,display_duration:float,layer:int,matrix:Matrix):
 	return (_id,text,x,y,color,shadow,display_duration,layer,*matrix.to_list())
-update_text=ScriptFunction("update_text",update_text)
+update_text=NoReturnScriptFunction("update_text",update_text)
 
 def _animate_text(_id:int,func:Callable[[TextObject], None])->None:
 	t=TextObject(_id)
@@ -470,7 +470,7 @@ get_rectangle_object=ScriptFunction("get_rectangle_object",get_rectangle_object)
 
 def update_rectangle(_id:int,sx:int,sy:int,ex:int,ey:int,color:int,display_duration:float,layer:int):
 	return (_id,sx,sy,ex,ey,color,display_duration,layer)
-update_rectangle=ScriptFunction("update_rectangle",update_rectangle)
+update_rectangle=NoReturnScriptFunction("update_rectangle",update_rectangle)
 
 def _animate_rectangle(_id:int,func:Callable[[RectangleObject],None])->None:
 	b=RectangleObject(_id)
@@ -585,7 +585,7 @@ get_gradient_rectangle_object=ScriptFunction("get_gradient_rectangle_object",get
 
 def update_gradient_rectangle(_id:int,sx:int,sy:int,ex:int,ey:int,start_color:int,end_color:int,display_duration:float,layer:int):
 	return (_id,sx,sy,ex,ey,start_color,end_color,display_duration,layer)
-update_gradient_rectangle=ScriptFunction("update_gradient_rectangle",update_gradient_rectangle)
+update_gradient_rectangle=NoReturnScriptFunction("update_gradient_rectangle",update_gradient_rectangle)
 
 def _animate_gradient_rectangle(_id:int,func:Callable[[GradientRectangleObject],None])->None:
 	b=GradientRectangleObject(_id)
@@ -769,7 +769,7 @@ get_text_with_background_object=ScriptFunction("get_text_with_background_object"
 
 def update_text_with_background(_id:int,text:str,x:int,y:int,margin_x:int,margin_y:int,color:int,bg_color:int,shadow:bool,display_duration:float,layer:int,matrix:Matrix):
 	return (_id,text,x,y,margin_x,margin_y,color,bg_color,shadow,display_duration,layer,*matrix.to_list())
-update_text_with_background=ScriptFunction("update_text_with_background",update_text_with_background)
+update_text_with_background=NoReturnScriptFunction("update_text_with_background",update_text_with_background)
 
 def _animate_text_with_background(_id:int,func:Callable[[TextWithBackgroundObject],None])->None:
 	t=TextWithBackgroundObject(_id)
@@ -898,7 +898,7 @@ get_item_object=ScriptFunction("get_item_object",get_item_object)
 
 def update_item(_id:int,item:str,x:int,y:int,display_duration:float,layer:int,matrix:Matrix):
 	return (_id,item,x,y,display_duration,layer,*matrix.to_list())
-update_item=ScriptFunction("update_item",update_item)
+update_item=NoReturnScriptFunction("update_item",update_item)
 
 def _animate_item(_id:int,func:Callable[[ItemObject],None])->None:
 	t=ItemObject(_id)
@@ -1055,7 +1055,7 @@ get_texture_object=ScriptFunction("get_texture_object",get_texture_object)
 
 def update_texture(_id:int,texture:Identifier,x:int,y:int,width:int,height:int,alpha:float,display_duration:float,layer:int,matrix:Matrix):
 	return (_id,*texture.to_list(),x,y,width,height,alpha,display_duration,layer,*matrix.to_list())
-update_texture=ScriptFunction("update_texture",update_texture)
+update_texture=NoReturnScriptFunction("update_texture",update_texture)
 
 def _animate_texture(_id:int,func:Callable[[TextureObject],None])->None:
 	t=TextureObject(_id)
@@ -1143,7 +1143,7 @@ def update_shape(_id:int,lines:list[Line],display_duration:float,layer:int,matri
 	out=[]
 	for l in lines: out.extend(l.to_list())
 	return (_id,out,display_duration,layer,*matrix.to_list())
-update_shape=ScriptFunction("update_shape",update_shape)
+update_shape=NoReturnScriptFunction("update_shape",update_shape)
 
 def _animate_shape(_id:int,func:Callable[[ShapeObject],None])->None:
 	s=ShapeObject(_id)
@@ -1405,7 +1405,7 @@ def remove_element(_id:int):
 	:param _id: ID of the element to remove.
 	"""
 	return (_id,)
-remove_element=ScriptFunction("remove_element",remove_element)
+remove_element=NoReturnScriptFunction("remove_element",remove_element)
 
 # noinspection PyTypeChecker
 def still_exists(_id:int)->bool:
@@ -1440,7 +1440,7 @@ def clear():
 	Removes all elements.
 	"""
 	return ()
-clear=ScriptFunction("clear",clear)
+clear=NoReturnScriptFunction("clear",clear)
 
 def wait_next_frame():
 	return ()
@@ -1451,4 +1451,4 @@ def suppress_done_message():
 	Removes the ``Done`` message that appears after a script finishes.
 	"""
 	return ()
-suppress_done_message=ScriptFunction("suppress_done_message",suppress_done_message)
+suppress_done_message=NoReturnScriptFunction("suppress_done_message",suppress_done_message)

@@ -44,12 +44,6 @@ public class MinescriptMixin {
 				cir.setReturnValue(ScriptValue.of(DrawHelper.getInstance().getTextObject(args.getStrictInt(0))));
 				cir.cancel();
 			}
-			case "update_text" -> {
-				args.expectSize(13);
-				DrawHelper.getInstance().updateText(args.getStrictInt(0), args.getString(1), args.getStrictInt(2), args.getStrictInt(3), args.getStrictInt(4), args.getBoolean(5), args.getDouble(6),args.getStrictInt(7),args.getDouble(8),args.getDouble(9),args.getDouble(10),args.getDouble(11),args.getDouble(12));
-				cir.setReturnValue(ScriptValue.TRUE);
-				cir.cancel();
-			}
 
 
 
@@ -65,12 +59,6 @@ public class MinescriptMixin {
 				cir.setReturnValue(ScriptValue.of(DrawHelper.getInstance().getRectangleObject(args.getStrictInt(0))));
 				cir.cancel();
 			}
-			case "update_rectangle" -> {
-				args.expectSize(8);
-				DrawHelper.getInstance().updateRectangle(args.getStrictInt(0),args.getStrictInt(1),args.getStrictInt(2),args.getStrictInt(3),args.getStrictInt(4),args.getStrictInt(5),args.getDouble(6),args.getStrictInt(7));
-				cir.setReturnValue(ScriptValue.TRUE);
-				cir.cancel();
-			}
 			case "add_gradient_rectangle" -> {
 				args.expectSize(8);
 				int id=DrawHelper.getInstance().addGradientRectangle(args.getStrictInt(0),args.getStrictInt(1),args.getStrictInt(2),args.getStrictInt(3),args.getStrictInt(4),args.getStrictInt(5),args.getDouble(6),args.getStrictInt(7));
@@ -80,12 +68,6 @@ public class MinescriptMixin {
 			case "get_gradient_rectangle_object" -> {
 				args.expectSize(1);
 				cir.setReturnValue(ScriptValue.of(DrawHelper.getInstance().getGradientRectangleObject(args.getStrictInt(0))));
-				cir.cancel();
-			}
-			case "update_gradient_rectangle" -> {
-				args.expectSize(9);
-				DrawHelper.getInstance().updateGradientRectangle(args.getStrictInt(0),args.getStrictInt(1),args.getStrictInt(2),args.getStrictInt(3),args.getStrictInt(4),args.getStrictInt(5),args.getStrictInt(6),args.getDouble(7),args.getStrictInt(8));
-				cir.setReturnValue(ScriptValue.TRUE);
 				cir.cancel();
 			}
 
@@ -110,12 +92,6 @@ public class MinescriptMixin {
 				cir.setReturnValue(ScriptValue.of(DrawHelper.getInstance().getTextWithBackgroundObject(args.getStrictInt(0))));
 				cir.cancel();
 			}
-			case "update_text_with_background" -> {
-				args.expectSize(16);
-				DrawHelper.getInstance().updateTextWithBackground(args.getStrictInt(0), args.getString(1), args.getStrictInt(2), args.getStrictInt(3), args.getStrictInt(4), args.getStrictInt(5), args.getStrictInt(6), args.getStrictInt(7), args.getBoolean(8), args.getDouble(9), args.getStrictInt(10), args.getDouble(11), args.getDouble(12), args.getDouble(13), args.getDouble(14), args.getDouble(15));
-				cir.setReturnValue(ScriptValue.TRUE);
-				cir.cancel();
-			}
 
 
 
@@ -136,12 +112,6 @@ public class MinescriptMixin {
 			case "get_item_object" -> {
 				args.expectSize(1);
 				cir.setReturnValue(ScriptValue.of(DrawHelper.getInstance().getItemObject(args.getStrictInt(0))));
-				cir.cancel();
-			}
-			case "update_item" -> {
-				args.expectSize(11);
-				DrawHelper.getInstance().updateItem(args.getStrictInt(0), args.getString(1), args.getStrictInt(2), args.getStrictInt(3), args.getDouble(4), args.getStrictInt(5), args.getDouble(6), args.getDouble(7), args.getDouble(8), args.getDouble(9), args.getDouble(10));
-				cir.setReturnValue(ScriptValue.TRUE);
 				cir.cancel();
 			}
 
@@ -166,12 +136,6 @@ public class MinescriptMixin {
 				cir.setReturnValue(ScriptValue.of(DrawHelper.getInstance().getTextureObject(args.getStrictInt(0))));
 				cir.cancel();
 			}
-			case "update_texture" -> {
-				args.expectSize(15);
-				DrawHelper.getInstance().updateTexture(args.getStrictInt(0), args.getString(1), args.getBoolean(2), args.getStrictInt(3), args.getStrictInt(4), args.getStrictInt(5), args.getStrictInt(6), args.getDouble(7), args.getDouble(8), args.getStrictInt(9), args.getDouble(10), args.getDouble(11), args.getDouble(12), args.getDouble(13), args.getDouble(14));
-				cir.setReturnValue(ScriptValue.TRUE);
-				cir.cancel();
-			}
 
 
 
@@ -194,29 +158,11 @@ public class MinescriptMixin {
 				cir.setReturnValue(ScriptValue.of(DrawHelper.getInstance().getShapeObject(args.getStrictInt(0))));
 				cir.cancel();
 			}
-			case "update_shape" -> {
-				args.expectSize(9);
-				DrawHelper.getInstance().updateShape(args.getStrictInt(0), (List<Map<String, Double>>)args.get(1), args.getDouble(2), args.getStrictInt(3), args.getDouble(4), args.getDouble(5), args.getDouble(6), args.getDouble(7), args.getDouble(8));
-				cir.setReturnValue(ScriptValue.TRUE);
-				cir.cancel();
-			}
 
 
 
 
 
-			case "batch_update" -> {
-				args.expectSize(1);
-				DrawHelper.getInstance().batch_update((List<Map<String, Object>>)args.get(0));
-				cir.setReturnValue(ScriptValue.TRUE);
-				cir.cancel();
-			}
-			case "remove_element" -> {
-				args.expectSize(1);
-				DrawHelper.getInstance().removeElement(args.getStrictInt(0));
-				cir.setReturnValue(ScriptValue.TRUE);
-				cir.cancel();
-			}
 			case "still_exists" -> {
 				args.expectSize(1);
 				cir.setReturnValue(ScriptValue.of(DrawHelper.getInstance().stillExists(args.getStrictInt(0))));
@@ -236,18 +182,81 @@ public class MinescriptMixin {
                 cir.setReturnValue(ScriptValue.TRUE);
                 cir.cancel();
             }
+		}
+    }
+
+	@Inject(method = "runScriptFunction",at=@At("HEAD"),cancellable = true)
+	@SuppressWarnings("unchecked")
+	private static void runNoReturnScriptFunction(ScriptFunctionCall functionCall, CallbackInfoReturnable<Boolean> cir) {
+		String functionName = functionCall.name();
+		ScriptFunctionCall.ArgList args = functionCall.args();
+		switch (functionName) {
+			case "update_text" -> {
+				args.expectSize(13);
+				DrawHelper.getInstance().updateText(args.getStrictInt(0), args.getString(1), args.getStrictInt(2), args.getStrictInt(3), args.getStrictInt(4), args.getBoolean(5), args.getDouble(6),args.getStrictInt(7),args.getDouble(8),args.getDouble(9),args.getDouble(10),args.getDouble(11),args.getDouble(12));
+				cir.setReturnValue(true);
+				cir.cancel();
+			}
+			case "update_rectangle" -> {
+				args.expectSize(8);
+				DrawHelper.getInstance().updateRectangle(args.getStrictInt(0),args.getStrictInt(1),args.getStrictInt(2),args.getStrictInt(3),args.getStrictInt(4),args.getStrictInt(5),args.getDouble(6),args.getStrictInt(7));
+				cir.setReturnValue(true);
+				cir.cancel();
+			}
+			case "update_gradient_rectangle" -> {
+				args.expectSize(9);
+				DrawHelper.getInstance().updateGradientRectangle(args.getStrictInt(0),args.getStrictInt(1),args.getStrictInt(2),args.getStrictInt(3),args.getStrictInt(4),args.getStrictInt(5),args.getStrictInt(6),args.getDouble(7),args.getStrictInt(8));
+				cir.setReturnValue(true);
+				cir.cancel();
+			}
+			case "update_text_with_background" -> {
+				args.expectSize(16);
+				DrawHelper.getInstance().updateTextWithBackground(args.getStrictInt(0), args.getString(1), args.getStrictInt(2), args.getStrictInt(3), args.getStrictInt(4), args.getStrictInt(5), args.getStrictInt(6), args.getStrictInt(7), args.getBoolean(8), args.getDouble(9), args.getStrictInt(10), args.getDouble(11), args.getDouble(12), args.getDouble(13), args.getDouble(14), args.getDouble(15));
+				cir.setReturnValue(true);
+				cir.cancel();
+			}
+			case "update_item" -> {
+				args.expectSize(11);
+				DrawHelper.getInstance().updateItem(args.getStrictInt(0), args.getString(1), args.getStrictInt(2), args.getStrictInt(3), args.getDouble(4), args.getStrictInt(5), args.getDouble(6), args.getDouble(7), args.getDouble(8), args.getDouble(9), args.getDouble(10));
+				cir.setReturnValue(true);
+				cir.cancel();
+			}
+			case "update_texture" -> {
+				args.expectSize(15);
+				DrawHelper.getInstance().updateTexture(args.getStrictInt(0), args.getString(1), args.getBoolean(2), args.getStrictInt(3), args.getStrictInt(4), args.getStrictInt(5), args.getStrictInt(6), args.getDouble(7), args.getDouble(8), args.getStrictInt(9), args.getDouble(10), args.getDouble(11), args.getDouble(12), args.getDouble(13), args.getDouble(14));
+				cir.setReturnValue(true);
+				cir.cancel();
+			}
+			case "update_shape" -> {
+				args.expectSize(9);
+				DrawHelper.getInstance().updateShape(args.getStrictInt(0), (List<Map<String, Double>>)args.get(1), args.getDouble(2), args.getStrictInt(3), args.getDouble(4), args.getDouble(5), args.getDouble(6), args.getDouble(7), args.getDouble(8));
+				cir.setReturnValue(true);
+				cir.cancel();
+			}
+			case "batch_update" -> {
+				args.expectSize(1);
+				DrawHelper.getInstance().batch_update((List<Map<String, Object>>)args.get(0));
+				cir.setReturnValue(true);
+				cir.cancel();
+			}
+			case "remove_element" -> {
+				args.expectSize(1);
+				DrawHelper.getInstance().removeElement(args.getStrictInt(0));
+				cir.setReturnValue(true);
+				cir.cancel();
+			}
 			case "clear" -> {
 				DrawHelper.getInstance().clear();
-				cir.setReturnValue(ScriptValue.TRUE);
+				cir.setReturnValue(true);
 				cir.cancel();
 			}
 			case "suppress_done_message" -> {
 				MinescriptHUDAddon.silent=true;
-				cir.setReturnValue(ScriptValue.TRUE);
+				cir.setReturnValue(true);
 				cir.cancel();
 			}
 		}
-    }
+	}
 
 	private static void copyJarResourceToFile(String resourceName, Path dir) {
 		String fileName = resourceName.substring(resourceName.lastIndexOf(47) + 1);
@@ -268,6 +277,7 @@ public class MinescriptMixin {
 			InputStream in=Minescript.class.getResourceAsStream("/" + resourceName);
 
 			try {
+				//noinspection DataFlowIssue
 				BufferedReader reader = new BufferedReader(new InputStreamReader(in));
 
 				try {
@@ -310,6 +320,7 @@ public class MinescriptMixin {
 				throw var16;
 			}
 
+			//noinspection ConstantValue
 			if (in != null) {
 				in.close();
 			}
