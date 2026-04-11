@@ -4,7 +4,6 @@ import net.fabricmc.api.ClientModInitializer;
 
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.minecraft.util.Identifier;
-import net.minescript.common.Minescript;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,11 +23,13 @@ public class MinescriptHUDAddon implements ClientModInitializer {
 		HudElementRegistry.addLast(Identifier.of(MOD_ID,"text_drawer"),DrawHelper.getInstance()::draw);
 		if (!getCurrentVersion().equals(getLastRunVersion())) {
 			LOGGER.info("Updating files!");
-			deleteMinescriptFile(Paths.get("minescript", "system"), "version.txt");
-			deleteMinescriptFile(Paths.get("minescript", "system", "lib"), "hud_renderer.py");
-			deleteMinescriptFile(Paths.get("minescript", "system", "lib"), "draw_text.py");
-			copyJarResourceToFile("hud_version.txt", Paths.get("minescript", "system"));
-			copyJarResourceToFile("system/lib/hud_renderer.py",Paths.get("minescript", "system", "lib"));
+			Path systemDir=Paths.get("minescript", "system");
+			Path libDir=Paths.get("minescript", "system", "lib");
+			deleteMinescriptFile(systemDir, "version.txt");
+			deleteMinescriptFile(libDir, "hud_renderer.py");
+			deleteMinescriptFile(libDir, "draw_text.py");
+			copyJarResourceToFile("hud_version.txt", systemDir);
+			copyJarResourceToFile("system/lib/hud_renderer.py", libDir);
 			copyJarResourceToFile("system/exec/clear_screen.py",Paths.get("minescript", "system", "exec"));
 		}
 	}
