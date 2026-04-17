@@ -148,6 +148,7 @@ update_batch=NoReturnScriptFunction("batch_update",update_batch)
 class BatchAnimator:
 	def __init__(self):
 		self.animations=[]
+		self.end_func=None
 
 	def animate_text(self,_id,func):
 		self.animations.append({"id":_id,"func":func,"type":"text","update_func":update_text,"object_type":TextObject,"object":None})
@@ -181,6 +182,10 @@ class BatchAnimator:
 		self.animations.append({"id":_id,"func":func,"type":"shape","update_func":update_shape,"object_type":ShapeObject,"object":None})
 		return self
 
+	def run_function_at_frame_end(self,func):
+		self.end_func=func
+		return self
+
 	def start(self):
 		while (len(self.animations)>0):
 			data=[]
@@ -202,6 +207,8 @@ class BatchAnimator:
 				data.append({"id":_id,"type":anim["type"],"data":l})
 			update_batch(data)
 			self.animations=[a for a in self.animations if still_exists(a["id"])]
+			if (self.end_func is not None):
+				self.end_func()
 			wait_next_frame()
 
 

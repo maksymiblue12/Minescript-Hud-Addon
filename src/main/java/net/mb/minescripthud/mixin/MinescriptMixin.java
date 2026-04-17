@@ -174,6 +174,23 @@ public class MinescriptMixin {
 
 
 
+			case "get_screen_width" -> {
+				cir.setReturnValue(ScriptValue.of(DrawHelper.getInstance().windowWidth));
+				cir.cancel();
+			}
+			case "get_screen_height" -> {
+				cir.setReturnValue(ScriptValue.of(DrawHelper.getInstance().windowHeight));
+				cir.cancel();
+			}
+			case "get_still_existing" -> {
+				cir.setReturnValue(ScriptValue.of(DrawHelper.getInstance().getStillExisting().toArray()));
+				cir.cancel();
+			}
+			case "get_elements" -> {
+				args.expectSize(1);
+				cir.setReturnValue(ScriptValue.of(DrawHelper.getInstance().getElements((List<Double>)args.get(0))));
+				cir.cancel();
+			}
 			case "still_exists" -> {
 				args.expectSize(1);
 				cir.setReturnValue(ScriptValue.of(DrawHelper.getInstance().stillExists(args.getStrictInt(0))));
@@ -252,7 +269,7 @@ public class MinescriptMixin {
 			}
 			case "batch_update" -> {
 				args.expectSize(1);
-				DrawHelper.getInstance().batch_update((List<Map<String, Object>>)args.get(0));
+				DrawHelper.getInstance().batchUpdate((List<Map<String, Object>>)args.get(0));
 				cir.setReturnValue(true);
 				cir.cancel();
 			}
