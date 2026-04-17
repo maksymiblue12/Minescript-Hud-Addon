@@ -63,6 +63,7 @@ class Matrix:
 		self._scale=[self._scale[0]*x,self._scale[1]*y]
 		return self
 
+	# noinspection PyShadowingNames
 	def rotate(self,radians):
 		"""
 		Applies rotation to the matrix.
@@ -145,6 +146,15 @@ def update_batch(data):
 	return (data,)
 update_batch=NoReturnScriptFunction("batch_update",update_batch)
 
+# noinspection PyTypeChecker
+def get_still_existing()->list[int]:
+	return ()
+get_still_existing=ScriptFunction("get_still_existing",get_still_existing)
+
+def get_elements(_ids:list[int])->dict:
+	return (_ids,)
+get_elements=ScriptFunction("get_elements",get_elements)
+
 class BatchAnimator:
 	def __init__(self):
 		self.animations=[]
@@ -189,27 +199,33 @@ class BatchAnimator:
 	def start(self):
 		while (len(self.animations)>0):
 			data=[]
+			existing=get_still_existing()
+			_ids=[j["id"] for j in self.animations]
+			existing=[i for i in existing if i in _ids]
+			updates:dict=get_elements(existing)
+			if (not updates["successful"]):
+				continue
+			updates=updates["elements"]
 			for anim in self.animations:
 				_id,func,update_func,obj=anim["id"],anim["func"],anim["update_func"],anim["object"]
-				if (not still_exists(_id)):
+				if (_id not in existing):
 					continue
 				if (obj is None):
 					obj=anim["object_type"](_id)
 					anim["object"]=obj
-				if (not obj.update(_id)):
+				if (not obj.update(_id,updates[str(_id)])):
 					continue
 				func(obj)
-				l=obj.to_list()
-				if (any(x is None for x in l)): continue
-				for i in range(len(l)):
-					if (hasattr(l[i],"to_list")):
-						l[i:i+1]=l[i].to_list()
+				l=obj.to_batch_list()
+				if (any(x is None for x in l)):
+					continue
 				data.append({"id":_id,"type":anim["type"],"data":l})
 			update_batch(data)
-			self.animations=[a for a in self.animations if still_exists(a["id"])]
+			self.animations=[a for a in self.animations if a["id"] in existing]
 			if (self.end_func is not None):
 				self.end_func()
 			wait_next_frame()
+
 
 
 
@@ -268,13 +284,16 @@ class TextObject(BaseObject):
 		return self._display_duration
 
 	# noinspection PyAttributeOutsideInit
-	def update(self,_id:int):
+	def update(self,_id:int,dt=-1):
 		"""
 		Updates this TextObject with the values of the text element specified by _id.
 
 		:param _id: ID of the text element.
 		"""
-		info=get_text_object(_id)
+		if (dt!=-1):
+			info=dt
+		else:
+			info=get_text_object(_id)
 		if (info is None or any(map(lambda x:x is None,info.values()))):
 			return False
 		self.text:str=info["text"]
@@ -289,6 +308,9 @@ class TextObject(BaseObject):
 		self._width=info["width"]
 		self._height=info["height"]
 		return True
+
+	def to_batch_list(self)->list:
+		return [self.text,self.x,self.y,self.color,self.shadow,self.display_duration_modifier,self.layer,*self.matrix.to_list()]
 
 	def to_list(self)->list:
 		"""
@@ -414,13 +436,16 @@ class RectangleObject(BaseObject):
 		return self._display_duration
 
 	# noinspection PyAttributeOutsideInit
-	def update(self,_id:int):
+	def update(self,_id:int,dt=-1):
 		"""
 		Updates this RectangleObject with the values of the rectangle element specified by _id.
 
 		:param _id: ID of the rectangle element.
 		"""
-		info=get_rectangle_object(_id)
+		if (dt!=-1):
+			info=dt
+		else:
+			info=get_rectangle_object(_id)
 		if (info is None or any(map(lambda x:x is None,info.values()))):
 			return False
 		self.start_x:int=info["sx"]
@@ -432,6 +457,9 @@ class RectangleObject(BaseObject):
 		self.display_duration_modifier:float=0
 		self.layer:int=info["layer"]
 		return True
+
+	def to_batch_list(self)->list:
+		return [self.start_x,self.start_y,self.end_x,self.end_y,self.color,self.display_duration_modifier,self.layer]
 
 	def to_list(self)->list:
 		"""
@@ -544,13 +572,16 @@ class GradientRectangleObject(BaseObject):
 		return self._display_duration
 
 	# noinspection PyAttributeOutsideInit
-	def update(self,_id:int):
+	def update(self,_id:int,dt=-1):
 		"""
 		Updates this GradientRectangleObject with the values of the gradient rectangle element specified by _id.
 
 		:param _id: ID of the gradient rectangle element.
 		"""
-		info=get_rectangle_object(_id)
+		if (dt!=-1):
+			info=dt
+		else:
+			info=get_gradient_rectangle_object(_id)
 		if (info is None or any(map(lambda x:x is None,info.values()))):
 			return False
 		self.start_x:int=info["sx"]
@@ -563,6 +594,9 @@ class GradientRectangleObject(BaseObject):
 		self.display_duration_modifier:float=0
 		self.layer:int=info["layer"]
 		return True
+
+	def to_batch_list(self)->list:
+		return [self.start_x,self.start_y,self.end_x,self.end_y,self.start_color,self.end_color,self.display_duration_modifier,self.layer]
 
 	def to_list(self)->list:
 		"""
@@ -657,13 +691,16 @@ class StrokedRectangleObject(BaseObject):
 		return self._display_duration
 
 	# noinspection PyAttributeOutsideInit
-	def update(self,_id:int):
+	def update(self,_id:int,dt=-1):
 		"""
 		Updates this StrokedRectangleObject with the values of the rectangle element specified by _id.
 
 		:param _id: ID of the rectangle element.
 		"""
-		info=get_rectangle_object(_id)
+		if (dt!=-1):
+			info=dt
+		else:
+			info=get_stroked_rectangle_object(_id)
 		if (info is None or any(map(lambda x:x is None,info.values()))):
 			return False
 		self.x:int=info["x"]
@@ -675,6 +712,9 @@ class StrokedRectangleObject(BaseObject):
 		self.display_duration_modifier:float=0
 		self.layer:int=info["layer"]
 		return True
+
+	def to_batch_list(self)->list:
+		return [self.x,self.y,self.width,self.height,self.color,self.display_duration_modifier,self.layer]
 
 	def to_list(self)->list:
 		"""
@@ -808,13 +848,16 @@ class TextWithBackgroundObject(BaseObject):
 		return self._display_duration
 
 	# noinspection PyAttributeOutsideInit
-	def update(self,_id:int):
+	def update(self,_id:int,dt=-1):
 		"""
 		Updates this TextObject with the values of the text element specified by _id.
 
 		:param _id: ID of the text element.
 		"""
-		info=get_text_with_background_object(_id)
+		if (dt!=-1):
+			info=dt
+		else:
+			info=get_text_with_background_object(_id)
 		if (info is None or any(map(lambda x:x is None,info.values()))):
 			return False
 		self.text:str=info["text"]
@@ -832,6 +875,9 @@ class TextWithBackgroundObject(BaseObject):
 		self._width=info["width"]
 		self._height=info["height"]
 		return True
+
+	def to_batch_list(self)->list:
+		return [self.text,self.x,self.y,self.margin_x,self.margin_y,self.color,self.bg_color,self.shadow,self.display_duration_modifier,self.layer,*self.matrix.to_list()]
 
 	def to_list(self)->list:
 		"""
@@ -954,13 +1000,16 @@ class ItemObject(BaseObject):
 		return self._display_duration
 
 	# noinspection PyAttributeOutsideInit
-	def update(self,_id:int):
+	def update(self,_id:int,dt=-1):
 		"""
 		Updates this ItemObject with the values of the item element specified by _id.
 
 		:param _id: ID of the item element.
 		"""
-		info=get_item_object(_id)
+		if (dt!=-1):
+			info=dt
+		else:
+			info=get_item_object(_id)
 		if (info is None or any(map(lambda x:x is None,info.values()))):
 			return False
 		self.item:str=info["item"]
@@ -971,6 +1020,9 @@ class ItemObject(BaseObject):
 		self.layer:int=info["layer"]
 		self.matrix=Matrix.from_dict(info)
 		return True
+
+	def to_batch_list(self)->list:
+		return [self.item,self.x,self.y,self.display_duration_modifier,self.layer,*self.matrix.to_list()]
 
 	def to_list(self)->list:
 		"""
@@ -1098,13 +1150,16 @@ class TextureObject(BaseObject):
 		return self._display_duration
 
 	# noinspection PyAttributeOutsideInit
-	def update(self,_id:int):
+	def update(self,_id:int,dt=-1):
 		"""
 		Updates this TextureObject with the values of the texture element specified by _id.
 
 		:param _id: ID of the texture element.
 		"""
-		info=get_texture_object(_id)
+		if (dt!=-1):
+			info=dt
+		else:
+			info=get_texture_object(_id)
 		if (info is None or any(map(lambda x:x is None,info.values()))):
 			return False
 		self.texture:Identifier=Identifier(info["texture"],info["vanilla"])
@@ -1118,6 +1173,9 @@ class TextureObject(BaseObject):
 		self.layer:int=info["layer"]
 		self.matrix=Matrix.from_dict(info)
 		return True
+
+	def to_batch_list(self)->list:
+		return [*self.texture.to_list(),self.x,self.y,self.width,self.height,self.alpha,self.display_duration_modifier,self.layer,*self.matrix.to_list()]
 
 	def to_list(self)->list:
 		"""
@@ -1226,8 +1284,11 @@ class ShapeObject(BaseObject):
 		return self._display_duration
 
 	# noinspection PyAttributeOutsideInit
-	def update(self,_id:int):
-		info=get_shape_object(_id)
+	def update(self,_id:int,dt=-1):
+		if (dt!=-1):
+			info=dt
+		else:
+			info=get_shape_object(_id)
 		if (info is None or any(map(lambda x:x is None,info.values()))):
 			return False
 		self.lines=[]
@@ -1241,6 +1302,11 @@ class ShapeObject(BaseObject):
 		self.layer:int=info["layer"]
 		self.matrix=Matrix.from_dict(info)
 		return True
+
+	def to_batch_list(self)->list:
+		out=[]
+		for l in self.lines: out.extend(l.to_list())
+		return [out,self.display_duration_modifier,self.layer,*self.matrix.to_list()]
 
 	def to_list(self)->list:
 		return [self.lines,self.display_duration_modifier,self.layer,self.matrix]
@@ -1341,8 +1407,6 @@ def add_advanced_multiline(points:list[tuple[int,int,int]],width:int,display_dur
 	return add_shape(lines,display_duration,layer)
 
 def get_lines_for_quad(p1:tuple[int,int],p2:tuple[int,int],p3:tuple[int,int],p4:tuple[int,int],color:int)->list[Line]:
-	if (len({p1,p2,p3,p4})!=4):
-		raise ValueError("Points must be unique!")
 	points=[p1,p2,p3,p4]
 	points.sort(key=lambda p:p[1])
 	tl,tr=((points[0],points[1]) if points[0][0]<points[1][0] else (points[1],points[0]))
@@ -1541,12 +1605,18 @@ def still_exists(_id:int)->bool:
 	return (_id,)
 still_exists=ScriptFunction("still_exists",still_exists)
 
-def _get_mouse():
+# noinspection PyTypeChecker
+def get_mouse()->MouseObject:
 	return ()
-_get_mouse=ScriptFunction("get_mouse",_get_mouse)
+get_mouse=ScriptFunction("get_mouse",get_mouse,lambda m:MouseObject(m))
 
-def get_mouse():
-	return MouseObject(_get_mouse())
+def get_screen_width()->int:
+	return ()
+get_screen_width=ScriptFunction("get_screen_width",get_screen_width)
+
+def get_screen_height()->int:
+	return ()
+get_screen_height=ScriptFunction("get_screen_height",get_screen_height)
 
 # noinspection PyTypeChecker
 def get_font_height()->int:
