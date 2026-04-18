@@ -18,7 +18,7 @@ add_text("This is a diamond:",10,y,full,False,10,1);y+=15
 add_item("diamond",10,y,10,1);y+=26
 add_text("This is a minecraft texture (hardcore_full.png):",10,y,full,False,10,1);y+=15
 add_texture(Identifier("hud/heart/hardcore_full",True),10,y,16,16,1.0,10,1);y+=46
-add_advanced_text("Elements can be scaled",69,y,full,False,10,1,Matrix().scale(2));y+=55
+add_advanced_text("Elements can be scaled",10,y,full,False,10,1,Matrix().scale(2));y+=55
 add_advanced_text("and rotated",10,y,full,False,10,1,Matrix().rotate(radians(45)));y+=50
 add_text("and animated!",10,y,full,False,10,1)
 
