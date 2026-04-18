@@ -10,6 +10,7 @@ This mod adds the ability to draw custom HUD elements in [Minescript](https://mo
  - Draw ***rectangles*** and gradient rectangles
  - Render ***items***
  - Render ***textures***
+ - Render ***custom shapes***
  - ***Animate*** all element properties
  - Control ***display duration*** and ***render layers***
 <br></br>
@@ -20,7 +21,7 @@ This mod adds the ability to draw custom HUD elements in [Minescript](https://mo
 <br></br>
 ## Example
 ```python
-from draw_text import *
+from hud_renderer import *
 
 add_text("Hello World",x=10,y=10,color=argb(255,255,255,255),shadow=True,display_duration=5)
 ```
@@ -28,7 +29,7 @@ add_text("Hello World",x=10,y=10,color=argb(255,255,255,255),shadow=True,display
 ## Animations
 All HUD elements can be animated using animation functions.
 ```python
-from draw_text import *
+from hud_renderer import *
 
 def move(text:TextObject):
     text.x+=1
@@ -69,6 +70,17 @@ Elements with higher layer values render above elements with lower layers.
  - `add_texture(...)`
  - `add_advanced_texture(...)`
  - `animate_texture(...)`
+
+### Shapes
+ - `add_shape(...)`
+ - `add_advanced_shape(...)`
+ - `animate_shape(...)`
+ - `add_line(...)`
+ - `add_multiline(...)`
+ - `add_triangle(...)`
+ - `add_quad(...)`
+ - `add_circle(...)`
+ - `add_ellipse(...)`
 
 ### Utility functions
  - `argb(...)`
