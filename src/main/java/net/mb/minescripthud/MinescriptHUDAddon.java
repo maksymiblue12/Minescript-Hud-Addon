@@ -25,7 +25,7 @@ public class MinescriptHUDAddon implements ClientModInitializer {
 			LOGGER.info("Updating files!");
 			Path systemDir=Paths.get("minescript", "system");
 			Path libDir=Paths.get("minescript", "system", "lib");
-			deleteMinescriptFile(systemDir, "version.txt");
+			deleteMinescriptFile(systemDir, "hud_version.txt");
 			deleteMinescriptFile(libDir, "hud_renderer.py");
 			deleteMinescriptFile(libDir, "draw_text.py");
 			copyJarResourceToFile("hud_version.txt", systemDir);
