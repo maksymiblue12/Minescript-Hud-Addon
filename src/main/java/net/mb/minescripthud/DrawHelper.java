@@ -2,18 +2,22 @@ package net.mb.minescripthud;
 
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import net.mb.minescripthud.util.ShapeGuiElementRenderState;
+import net.mb.minescripthud.util.Vertex;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.Mouse;
 import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.render.RenderTickCounter;
+import net.minecraft.client.gui.ScreenRect;
+import net.minecraft.client.render.*;
+import net.minecraft.client.texture.TextureSetup;
 import net.minecraft.command.argument.ItemStackArgument;
 import net.minecraft.command.argument.ItemStringReader;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
 import net.minecraft.util.Identifier;
 import net.minescript.common.Jsonable;
-import org.joml.Matrix3x2f;
+import org.joml.*;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -23,6 +27,8 @@ public class DrawHelper {
 	private final Map<Integer,Layered> elements=new HashMap<>();
 	private final Map<Integer,LayeredUpdate> elementUpdates=new HashMap<>();
 	private int currentId=0;
+	public int windowWidth=0;
+	public int windowHeight=0;
 
 	private DrawHelper() {}
 
@@ -53,19 +59,76 @@ public class DrawHelper {
 	}
 
 	private ItemStack getItemStack(String item) throws CommandSyntaxException {
+		int amount=1;
+		if (item.matches(".* [0-9]+")) {
+			amount=Integer.parseInt(item.substring(item.strip().lastIndexOf(' ')+1));
+		}
+		//noinspection DataFlowIssue
 		ItemStringReader.ItemResult itemResult=new ItemStringReader(MinecraftClient.getInstance().getNetworkHandler().getRegistryManager()).consume(new StringReader(item));
-		return new ItemStackArgument(itemResult.item(),itemResult.components()).createStack(1,false);
+		return new ItemStackArgument(itemResult.item(),itemResult.components()).createStack(amount,false);
 	}
 
-	public static Matrix3x2f createMatrx(int x, int y, int w, int h, double scale_x, double scale_y, double rotation, double diff_x, double diff_y) {
+	public static Matrix3x2f createMatrix(int x, int y, int w, int h, double scale_x, double scale_y, double rotation, double diff_x, double diff_y) {
 		float cx=(w/2f);
 		float cy=(h/2f);
 		return new Matrix3x2f()
 				.translate(cx,cy)
 				.rotateAbout((float) rotation,x,y)
-				.scale((float)scale_x,(float)scale_y)
 				.translate(-cx,-cy)
+				.scale((float)scale_x,(float)scale_y)
 				.translate((float) (diff_x-(double)x*((scale_x-1)/scale_x)),(float) (diff_y-(double)y*((scale_y-1)/scale_y)));
+	}
+
+	@SuppressWarnings("unchecked")
+	public void batchUpdate(List<Map<String, Object>> updates) {
+		for (Map<String, Object> upd:updates) {
+			List<Object> data=(List<Object>)upd.get("data");
+			switch ((String)upd.get("type")) {
+				case "text" -> updateText(((Double)upd.get("id")).intValue(),(String)data.get(0),((Double)data.get(1)).intValue(),((Double)data.get(2)).intValue(),((Double)data.get(3)).intValue(),(boolean)data.get(4),(double)data.get(5),((Double)data.get(6)).intValue(),(double)data.get(7),(double)data.get(8),(double)data.get(9),(double)data.get(10),(double)data.get(11));
+				case "rectangle" -> updateRectangle(((Double)upd.get("id")).intValue(),((Double)data.get(0)).intValue(),((Double)data.get(1)).intValue(),((Double)data.get(2)).intValue(),((Double)data.get(3)).intValue(),((Double)data.get(4)).intValue(),(double)data.get(5),((Double)data.get(6)).intValue());
+				case "gradient_rectangle" -> updateGradientRectangle(((Double)upd.get("id")).intValue(),((Double)data.get(0)).intValue(),((Double)data.get(1)).intValue(),((Double)data.get(2)).intValue(),((Double)data.get(3)).intValue(),((Double)data.get(4)).intValue(),((Double)data.get(5)).intValue(),(double)data.get(6),((Double)data.get(7)).intValue());
+				case "stroked_rectangle" -> updateStrokedRectangle(((Double)upd.get("id")).intValue(),((Double)data.get(0)).intValue(),((Double)data.get(1)).intValue(),((Double)data.get(2)).intValue(),((Double)data.get(3)).intValue(),((Double)data.get(4)).intValue(),(double)data.get(5),((Double)data.get(6)).intValue());
+				case "text_with_background" -> updateTextWithBackground(((Double)upd.get("id")).intValue(),(String)data.get(0),((Double)data.get(1)).intValue(),((Double)data.get(2)).intValue(),((Double)data.get(3)).intValue(),((Double)data.get(4)).intValue(),((Double)data.get(5)).intValue(),((Double)data.get(6)).intValue(),(boolean)data.get(7),(double)data.get(8),((Double)data.get(9)).intValue(),(double)data.get(10),(double)data.get(11),(double)data.get(12),(double)data.get(13),(double)data.get(14));
+				case "item" -> updateItem(((Double)upd.get("id")).intValue(),(String)data.get(0),((Double)data.get(1)).intValue(),((Double)data.get(2)).intValue(),(double)data.get(3),((Double)data.get(4)).intValue(),(double)data.get(5),(double)data.get(6),(double)data.get(7),(double)data.get(8),(double)data.get(9));
+				case "texture" -> updateTexture(((Double)upd.get("id")).intValue(),(String)data.get(0),(boolean)data.get(1),((Double)data.get(2)).intValue(),((Double)data.get(3)).intValue(),((Double)data.get(4)).intValue(),((Double)data.get(5)).intValue(),(double)data.get(6),(double)data.get(7),((Double)data.get(8)).intValue(),(double)data.get(9),(double)data.get(10),(double)data.get(11),(double)data.get(12),(double)data.get(13));
+				case "shape" -> updateShape(((Double)upd.get("id")).intValue(),(List<Map<String,Double>>)data.get(0),(double)data.get(1),((Double)data.get(2)).intValue(),(double)data.get(3),(double)data.get(4),(double)data.get(5),(double)data.get(6),(double)data.get(7));
+			}
+		}
+	}
+
+	public Set<Integer> getStillExisting() {
+		return elements.keySet();
+	}
+
+	public static class JsonableElements extends Jsonable {
+		public Map<Integer,Jsonable> elements;
+		public boolean successful;
+		public JsonableElements(Map<Integer,Jsonable> elements,boolean successful) {
+			this.elements=elements;
+			this.successful=successful;
+		}
+	}
+
+	public JsonableElements getElements(List<Double> ids) {
+		Map<Integer,Jsonable> out=new HashMap<>();
+		for (Double _id:ids) {
+			int id=_id.intValue();
+			if (!elements.containsKey(id)) {
+				return new JsonableElements(out,false);
+			}
+			switch (elements.get(id)) {
+				case TextObject t -> out.put(id,new JsonableTextObject(t));
+				case RectangleObject r -> out.put(id,new JsonableRectangleObject(r));
+				case GradientRectangleObject r -> out.put(id,new JsonableGradientRectangleObject(r));
+				case StrokedRectangleObject r -> out.put(id,new JsonableStrokedRectangleObject(r));
+				case TextWithBackgroundObject t -> out.put(id,new JsonableTextWithBackgroundObject(t));
+				case ItemObject t -> out.put(id,new JsonableItemObject(t));
+				case TextureObject t -> out.put(id,new JsonableTextureObject(t));
+				case ShapeObject t -> out.put(id,new JsonableShapeObject(t));
+				default -> {}
+			}
+		}
+		return new JsonableElements(out,true);
 	}
 
 
@@ -195,10 +258,12 @@ public class DrawHelper {
 	}
 
 	public void updateItem(int id, String item, int x, int y, double displayDurationModifier, int layer, double scale_x, double scale_y, double rotation, double diff_x, double diff_y) {
-		if (!Registries.ITEM.containsId(Identifier.ofVanilla(item))) {
+		ItemStack itemStack;
+		try {
+			itemStack=this.getItemStack(item);
+		} catch (CommandSyntaxException e) {
 			throw new NoSuchElementException("No item of name '"+item+"' exists!");
 		}
-		ItemStack itemStack=new ItemStack(Registries.ITEM.get(Identifier.ofVanilla(item)));
 		elementUpdates.put(id,new ItemObjectUpdate(itemStack,x,y,displayDurationModifier,layer,scale_x,scale_y,rotation,diff_x,diff_y));
 	}
 
@@ -248,6 +313,33 @@ public class DrawHelper {
 
 
 
+	public int addShape(List<Map<String, Double>> vertices, double displayDuration, int layer) {
+		List<Vertex> verticesFormated=vertices.stream().map(v -> new Vertex(v.get("x").intValue(),v.get("y").intValue(),v.get("color").intValue())).toList();
+		int i=this.getId();
+		elements.put(i, new ShapeObject(verticesFormated, displayDuration, layer));
+		return i;
+	}
+
+	public int addAdvancedShape(List<Map<String, Double>> vertices, double displayDuration, int layer, double scale_x, double scale_y, double rotation, double diff_x, double diff_y) {
+		List<Vertex> verticesFormated=vertices.stream().map(v -> new Vertex(v.get("x").intValue(),v.get("y").intValue(),v.get("color").intValue())).toList();
+		int i=this.getId();
+		elements.put(i, new ShapeObject(verticesFormated, displayDuration, layer,scale_x,scale_y,rotation,diff_x,diff_y));
+		return i;
+	}
+
+	public JsonableShapeObject getShapeObject(int id) {
+		return new JsonableShapeObject((ShapeObject) elements.get(id));
+	}
+
+	public void updateShape(int id, List<Map<String, Double>> vertices, double displayDurationModifier, int layer, double scale_x, double scale_y, double rotation, double diff_x, double diff_y) {
+		List<Vertex> verticesFormated=vertices.stream().map(v -> new Vertex(v.get("x").intValue(),v.get("y").intValue(),v.get("color").intValue())).toList();
+		elementUpdates.put(id,new ShapeObjectUpdate(verticesFormated,displayDurationModifier,layer,scale_x,scale_y,rotation,diff_x,diff_y));
+	}
+
+
+
+
+
 	public void tick(RenderTickCounter renderTickCounter) {
 		float deltaSeconds = renderTickCounter.getDynamicDeltaTicks()/20.0f;
 
@@ -256,12 +348,13 @@ public class DrawHelper {
 			Map.Entry<Integer, Layered> entry=iter.next();
 			Layered t=entry.getValue();
 			t.setDisplayDuration(t.getDisplayDuration()-deltaSeconds);
-			if (t.getDisplayDuration() <= 0) {
+			if (t.getDisplayDuration()<=0) {
 				iter.remove();
 			}
 		}
 		if (elements.isEmpty()) {
 			currentId=0;
+			elementUpdates.clear();
 		}
 	}
 
@@ -289,10 +382,14 @@ public class DrawHelper {
 				context.fill(t.getX()-t.getMarginX(), t.getY()-t.getMarginY(), t.getX()+client.textRenderer.getWidth(t.getText())-1+t.getMarginX(), t.getY()+client.textRenderer.fontHeight-2+t.getMarginY(), t.getBgColor());
 				context.drawText(client.textRenderer, t.getText(), t.getX(), t.getY(), t.getColor(), t.getShadow());
 			}
-			case ItemObject i ->
-				context.drawItem(i.getItem(),i.getX(),i.getY());
+			case ItemObject i -> {
+				context.drawItem(i.getItem(), i.getX(), i.getY());
+				context.drawStackOverlay(client.textRenderer,i.getItem(),i.getX(),i.getY());
+			}
 			case TextureObject t ->
 				context.drawGuiTexture(RenderPipelines.GUI_TEXTURED,t.getTexture(),t.getX(),t.getY(),t.getWidth(),t.getHeight(),t.getAlpha());
+			case ShapeObject s ->
+				context.state.addSimpleElement(new ShapeGuiElementRenderState(RenderPipelines.GUI, TextureSetup.empty(), new Matrix3x2f(context.getMatrices()), s.getVertices(), context.scissorStack.peekLast(), s.getBounds()));
 			default -> throw new IllegalStateException("Unexpected value: " + element);
 		}
 	}
@@ -315,6 +412,8 @@ public class DrawHelper {
 		this.update();
 		this.tick(renderTickCounter);
 		this.render(context);
+		windowWidth=context.getScaledWindowWidth();
+		windowHeight=context.getScaledWindowHeight();
 	}
 
 
@@ -427,10 +526,10 @@ public class DrawHelper {
 			to.setY(this.y);
 			to.setColor(this.color);
 			to.setShadow(this.shadow);
-			to.setDisplayDuration(to.getDisplayDuration()+this.displayDurationModifier);
+			to.setDisplayDuration(Double.min(to.getDisplayDuration()+this.displayDurationModifier,Double.MAX_VALUE-1));
 			to.setLayer(this.layer);
 			to.getMatrixInfo().put("scale_x",this.scale_x);to.getMatrixInfo().put("scale_y",this.scale_y);to.getMatrixInfo().put("rotation",this.rotation);to.getMatrixInfo().put("diff_x",this.diff_x);to.getMatrixInfo().put("diff_y",this.diff_y);
-			to.setMatrix(DrawHelper.createMatrx(x,y,MinecraftClient.getInstance().textRenderer.getWidth(text),MinecraftClient.getInstance().textRenderer.fontHeight,scale_x,scale_y,rotation,diff_x,diff_y));
+			to.setMatrix(DrawHelper.createMatrix(x,y,MinecraftClient.getInstance().textRenderer.getWidth(text),MinecraftClient.getInstance().textRenderer.fontHeight,scale_x,scale_y,rotation,diff_x,diff_y));
 		}
 	}
 
@@ -464,7 +563,7 @@ public class DrawHelper {
 			this.shadow=shadow;
 			this.displayDuration=displayDuration;
 			this.matrix_info.put("scale_x",scale_x);this.matrix_info.put("scale_y",scale_y);this.matrix_info.put("rotation",rotation);this.matrix_info.put("diff_x",diff_x);this.matrix_info.put("diff_y",diff_y);
-			this.matrix=DrawHelper.createMatrx(x,y,MinecraftClient.getInstance().textRenderer.getWidth(text),MinecraftClient.getInstance().textRenderer.fontHeight,scale_x,scale_y,rotation,diff_x,diff_y);
+			this.matrix=DrawHelper.createMatrix(x,y,MinecraftClient.getInstance().textRenderer.getWidth(text),MinecraftClient.getInstance().textRenderer.fontHeight,scale_x,scale_y,rotation,diff_x,diff_y);
 			this.layer=layer;
 		}
 
@@ -599,7 +698,7 @@ public class DrawHelper {
 			to.setEndX(this.ex);
 			to.setEndY(this.ey);
 			to.setColor(this.color);
-			to.setDisplayDuration(to.getDisplayDuration()+this.displayDurationModifier);
+			to.setDisplayDuration(Double.min(to.getDisplayDuration()+this.displayDurationModifier,Double.MAX_VALUE-1));
 			to.setLayer(this.layer);
 		}
 	}
@@ -754,7 +853,7 @@ public class DrawHelper {
 			to.setEndY(this.ey);
 			to.setStartColor(this.startColor);
 			to.setEndColor(this.endColor);
-			to.setDisplayDuration(to.getDisplayDuration()+this.displayDurationModifier);
+			to.setDisplayDuration(Double.min(to.getDisplayDuration()+this.displayDurationModifier,Double.MAX_VALUE-1));
 			to.setLayer(this.layer);
 		}
 	}
@@ -914,7 +1013,7 @@ public class DrawHelper {
 			to.setWidth(this.ex);
 			to.setHeight(this.ey);
 			to.setColor(this.color);
-			to.setDisplayDuration(to.getDisplayDuration()+this.displayDurationModifier);
+			to.setDisplayDuration(Double.min(to.getDisplayDuration()+this.displayDurationModifier,Double.MAX_VALUE-1));
 			to.setLayer(this.layer);
 		}
 	}
@@ -1103,10 +1202,10 @@ public class DrawHelper {
 			to.setColor(this.color);
 			to.setBgColor(bgColor);
 			to.setShadow(this.shadow);
-			to.setDisplayDuration(to.getDisplayDuration()+this.displayDurationModifier);
+			to.setDisplayDuration(Double.min(to.getDisplayDuration()+this.displayDurationModifier,Double.MAX_VALUE-1));
 			to.setLayer(this.layer);
 			to.getMatrixInfo().put("scale_x",this.scale_x);to.getMatrixInfo().put("scale_y",this.scale_y);to.getMatrixInfo().put("rotation",this.rotation);to.getMatrixInfo().put("diff_x",this.diff_x);to.getMatrixInfo().put("diff_y",this.diff_y);
-			to.setMatrix(DrawHelper.createMatrx(x,y,MinecraftClient.getInstance().textRenderer.getWidth(text),MinecraftClient.getInstance().textRenderer.fontHeight,scale_x,scale_y,rotation,diff_x,diff_y));
+			to.setMatrix(DrawHelper.createMatrix(x,y,MinecraftClient.getInstance().textRenderer.getWidth(text),MinecraftClient.getInstance().textRenderer.fontHeight,scale_x,scale_y,rotation,diff_x,diff_y));
 		}
 	}
 
@@ -1149,7 +1248,7 @@ public class DrawHelper {
 			this.shadow=shadow;
 			this.displayDuration=displayDuration;
 			this.matrix_info.put("scale_x",scale_x);this.matrix_info.put("scale_y",scale_y);this.matrix_info.put("rotation",rotation);this.matrix_info.put("diff_x",diff_x);this.matrix_info.put("diff_y",diff_y);
-			this.matrix=DrawHelper.createMatrx(x,y,MinecraftClient.getInstance().textRenderer.getWidth(text),MinecraftClient.getInstance().textRenderer.fontHeight,scale_x,scale_y,rotation,diff_x,diff_y);
+			this.matrix=DrawHelper.createMatrix(x,y,MinecraftClient.getInstance().textRenderer.getWidth(text),MinecraftClient.getInstance().textRenderer.fontHeight,scale_x,scale_y,rotation,diff_x,diff_y);
 		}
 
 		public String getText() {
@@ -1312,10 +1411,10 @@ public class DrawHelper {
 			to.setItem(this.item);
 			to.setX(this.x);
 			to.setY(this.y);
-			to.setDisplayDuration(to.getDisplayDuration()+displayDurationModifier);
+			to.setDisplayDuration(Double.min(to.getDisplayDuration()+this.displayDurationModifier,Double.MAX_VALUE-1));
 			to.setLayer(this.layer);
 			to.getMatrixInfo().put("scale_x",this.scale_x);to.getMatrixInfo().put("scale_y",this.scale_y);to.getMatrixInfo().put("rotation",this.rotation);to.getMatrixInfo().put("diff_x",this.diff_x);to.getMatrixInfo().put("diff_y",this.diff_y);
-			to.setMatrix(DrawHelper.createMatrx(x,y,16,16,scale_x,scale_y,rotation,diff_x,diff_y));
+			to.setMatrix(DrawHelper.createMatrix(x,y,16,16,scale_x,scale_y,rotation,diff_x,diff_y));
 		}
 	}
 
@@ -1343,7 +1442,7 @@ public class DrawHelper {
 			this.y=y;
 			this.displayDuration=displayDuration;
 			this.matrix_info.put("scale_x",scale_x);this.matrix_info.put("scale_y",scale_y);this.matrix_info.put("rotation",rotation);this.matrix_info.put("diff_x",diff_x);this.matrix_info.put("diff_y",diff_y);
-			this.matrix=DrawHelper.createMatrx(x,y,16,16,scale_x,scale_y,rotation,diff_x,diff_y);
+			this.matrix=DrawHelper.createMatrix(x,y,16,16,scale_x,scale_y,rotation,diff_x,diff_y);
 			this.layer=layer;
 		}
 
@@ -1485,10 +1584,10 @@ public class DrawHelper {
 			to.setWidth(this.width);
 			to.setHeight(this.height);
 			to.setAlpha(this.alpha);
-			to.setDisplayDuration(to.getDisplayDuration()+displayDurationModifier);
+			to.setDisplayDuration(Double.min(to.getDisplayDuration()+this.displayDurationModifier,Double.MAX_VALUE-1));
 			to.setLayer(this.layer);
 			to.getMatrixInfo().put("scale_x",this.scale_x);to.getMatrixInfo().put("scale_y",this.scale_y);to.getMatrixInfo().put("rotation",this.rotation);to.getMatrixInfo().put("diff_x",this.diff_x);to.getMatrixInfo().put("diff_y",this.diff_y);
-			to.setMatrix(DrawHelper.createMatrx(x,y,width,height,scale_x,scale_y,rotation,diff_x,diff_y));
+			to.setMatrix(DrawHelper.createMatrix(x,y,width,height,scale_x,scale_y,rotation,diff_x,diff_y));
 		}
 	}
 
@@ -1524,7 +1623,7 @@ public class DrawHelper {
 			this.alpha=alpha;
 			this.displayDuration=displayDuration;
 			this.matrix_info.put("scale_x",scale_x);this.matrix_info.put("scale_y",scale_y);this.matrix_info.put("rotation",rotation);this.matrix_info.put("diff_x",diff_x);this.matrix_info.put("diff_y",diff_y);
-			this.matrix=DrawHelper.createMatrx(x,y,width,height,scale_x,scale_y,rotation,diff_x,diff_y);
+			this.matrix=DrawHelper.createMatrix(x,y,width,height,scale_x,scale_y,rotation,diff_x,diff_y);
 			this.layer=layer;
 		}
 
@@ -1574,6 +1673,152 @@ public class DrawHelper {
 
 		public void setAlpha(float newAlpha) {
 			alpha=newAlpha;
+		}
+
+		@Override
+		public int getLayer() {
+			return layer;
+		}
+
+		@Override
+		public void setLayer(int newLayer) {
+			layer=newLayer;
+		}
+
+		@Override
+		public Matrix3x2f getMatrix() {
+			return matrix;
+		}
+
+		@Override
+		public void setMatrix(Matrix3x2f newMatrix) {
+			matrix=newMatrix;
+		}
+
+		@Override
+		public Map<String, Double> getMatrixInfo() {
+			return matrix_info;
+		}
+
+		@Override
+		public double getDisplayDuration() {
+			return displayDuration;
+		}
+
+		@Override
+		public void setDisplayDuration(double newDisplayDuration) {
+			displayDuration=newDisplayDuration;
+		}
+	}
+
+
+
+
+
+	public static class JsonableShapeObject extends Jsonable {
+		public List<Map<String, Integer>> vertices;
+		public double displayDuration;
+		public int layer;
+		public double scale_x;
+		public double scale_y;
+		public double rotation;
+		public double diff_x;
+		public double diff_y;
+		public JsonableShapeObject(ShapeObject from) {
+			if (Objects.isNull(from)) {
+				return;
+			}
+			this.vertices=from.getVertices().stream().map(v -> Map.of("x",v.x(),"y",v.y(),"color",v.color())).toList();
+			this.scale_x=from.getMatrixInfo().get("scale_x");
+			this.scale_y=from.getMatrixInfo().get("scale_y");
+			this.rotation=from.getMatrixInfo().get("rotation");
+			this.diff_x=from.getMatrixInfo().get("diff_x");
+			this.diff_y=from.getMatrixInfo().get("diff_y");
+			this.displayDuration=from.getDisplayDuration();
+			this.layer=from.getLayer();
+		}
+	}
+
+	public static class ShapeObjectUpdate implements LayeredUpdate {
+		private final List<Vertex> vertices;
+		private final double displayDurationModifier;
+		private final int layer;
+		private final double scale_x;
+		private final double scale_y;
+		private final double rotation;
+		private final double diff_x;
+		private final double diff_y;
+		public ShapeObjectUpdate(List<Vertex> vertices, double displayDurationModifier, int layer, double scale_x, double scale_y, double rotation, double diff_x, double diff_y) {
+			this.vertices=vertices;
+			this.displayDurationModifier=displayDurationModifier;
+			this.layer=layer;
+			this.scale_x=scale_x;this.scale_y=scale_y;this.rotation=rotation;this.diff_x=diff_x;this.diff_y=diff_y;
+		}
+
+		@Override
+		public void applyTo(Layered target) {
+			if (Objects.isNull(target)) {
+				return;
+			}
+			ShapeObject to=(ShapeObject)target;
+			to.setVertices(vertices);
+			to.updateBounds();
+			to.setDisplayDuration(Double.min(to.getDisplayDuration()+this.displayDurationModifier,Double.MAX_VALUE-1));
+			to.setLayer(this.layer);
+			to.getMatrixInfo().put("scale_x",this.scale_x);to.getMatrixInfo().put("scale_y",this.scale_y);to.getMatrixInfo().put("rotation",this.rotation);to.getMatrixInfo().put("diff_x",this.diff_x);to.getMatrixInfo().put("diff_y",this.diff_y);
+			to.setMatrix(DrawHelper.createMatrix(to.getBounds().getLeft(),to.getBounds().getTop(),to.getBounds().width(),to.getBounds().height(),scale_x,scale_y,rotation,diff_x,diff_y));
+		}
+	}
+
+	public static class ShapeObject implements Layered {
+		private List<Vertex> vertices;
+		private ScreenRect bounds;
+		private double displayDuration;
+		private final Map<String, Double> matrix_info=new HashMap<>();
+		private Matrix3x2f matrix;
+		private int layer;
+		public ShapeObject(List<Vertex> vertices, double displayDuration, int layer) {
+			this.vertices=vertices;
+			this.bounds=this.createBounds();
+			this.displayDuration=displayDuration;
+			this.matrix_info.put("scale_x",1d);this.matrix_info.put("scale_y",1d);this.matrix_info.put("rotation",0d);this.matrix_info.put("diff_x",0d);this.matrix_info.put("diff_y",0d);
+			this.matrix=new Matrix3x2f();
+			this.layer=layer;
+		}
+		public ShapeObject(List<Vertex> vertices, double displayDuration, int layer, double scale_x, double scale_y, double rotation, double diff_x, double diff_y) {
+			this.vertices=vertices;
+			this.bounds=this.createBounds();
+			this.displayDuration=displayDuration;
+			this.matrix_info.put("scale_x",scale_x);this.matrix_info.put("scale_y",scale_y);this.matrix_info.put("rotation",rotation);this.matrix_info.put("diff_x",diff_x);this.matrix_info.put("diff_y",diff_y);
+			this.matrix=DrawHelper.createMatrix(bounds.getLeft(),bounds.getTop(),bounds.width(),bounds.height(),scale_x,scale_y,rotation,diff_x,diff_y);
+			this.layer=layer;
+		}
+
+		private ScreenRect createBounds() {
+			int left=Integer.MAX_VALUE,right=0,top=Integer.MAX_VALUE,bottom=0;
+			for (Vertex v:vertices) {
+				if (v.x()>right) right=v.x();
+				if (v.x()<left) left=v.x();
+				if (v.y()>bottom) bottom=v.y();
+				if (v.y()<top) top=v.y();
+			}
+			return new ScreenRect(left,top,right-left,bottom-top);
+		}
+
+		public List<Vertex> getVertices() {
+			return vertices;
+		}
+
+		public void setVertices(List<Vertex> newVertices) {
+			vertices=newVertices;
+		}
+
+		public ScreenRect getBounds() {
+			return bounds;
+		}
+
+		public void updateBounds() {
+			bounds=this.createBounds();
 		}
 
 		@Override
