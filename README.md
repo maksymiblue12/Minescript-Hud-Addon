@@ -66,7 +66,7 @@ Elements with higher layer values render above elements with lower layers.
  - `animate_item(...)`
 
 ### Textures
-> **Note:** Custom textures must be added by a resource pack in the `assets/minescripthud/textures/gui/sprites/` folder.
+> **Note:** Custom textures can be added by a resource pack in the `assets/minescripthud/textures/gui/sprites/` folder.
  - `add_texture(...)`
  - `add_advanced_texture(...)`
  - `animate_texture(...)`
