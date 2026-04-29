@@ -4,18 +4,18 @@ import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.mb.minescripthud.util.ShapeGuiElementRenderState;
 import net.mb.minescripthud.util.Vertex;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.Mouse;
-import net.minecraft.client.gl.RenderPipelines;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.ScreenRect;
-import net.minecraft.client.render.*;
-import net.minecraft.client.texture.TextureSetup;
-import net.minecraft.command.argument.ItemStackArgument;
-import net.minecraft.command.argument.ItemStringReader;
-import net.minecraft.item.ItemStack;
-import net.minecraft.registry.Registries;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.DeltaTracker;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.MouseHandler;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.navigation.ScreenRectangle;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.gui.render.TextureSetup;
+import net.minecraft.commands.arguments.item.ItemInput;
+import net.minecraft.commands.arguments.item.ItemParser;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.ItemStack;
 import net.minescript.common.Jsonable;
 import org.joml.*;
 
@@ -55,7 +55,7 @@ public class DrawHelper {
 	}
 
 	public JsonableMouseObject getMouse() {
-		return new JsonableMouseObject(MinecraftClient.getInstance().mouse);
+		return new JsonableMouseObject(Minecraft.getInstance().mouseHandler);
 	}
 
 	private ItemStack getItemStack(String item) throws CommandSyntaxException {
@@ -64,8 +64,8 @@ public class DrawHelper {
 			amount=Integer.parseInt(item.substring(item.strip().lastIndexOf(' ')+1));
 		}
 		//noinspection DataFlowIssue
-		ItemStringReader.ItemResult itemResult=new ItemStringReader(MinecraftClient.getInstance().getNetworkHandler().getRegistryManager()).consume(new StringReader(item));
-		return new ItemStackArgument(itemResult.item(),itemResult.components()).createStack(amount,false);
+		ItemInput itemResult=new ItemParser(Minecraft.getInstance().getConnection().registryAccess()).parse(new StringReader(item));
+		return itemResult.createItemStack(amount);
 	}
 
 	public static Matrix3x2f createMatrix(int x, int y, int w, int h, double scale_x, double scale_y, double rotation, double diff_x, double diff_y) {
@@ -274,9 +274,9 @@ public class DrawHelper {
 	public int addTexture(String texture, boolean vanilla, int x, int y, int width, int height, double alpha, double displayDuration, int layer) {
 		Identifier t;
 		if (vanilla) {
-			t=Identifier.ofVanilla(texture);
+			t=Identifier.withDefaultNamespace(texture);
 		} else {
-			t=Identifier.of(MinescriptHUDAddon.MOD_ID,texture);
+			t=Identifier.fromNamespaceAndPath(MinescriptHUDAddon.MOD_ID,texture);
 		}
 		int i=this.getId();
 		elements.put(i, new TextureObject(t, x, y, width, height, (float) alpha, displayDuration, layer));
@@ -286,9 +286,9 @@ public class DrawHelper {
 	public int addAdvancedTexture(String texture, boolean vanilla, int x, int y, int width, int height, double alpha, double displayDuration, int layer, double scale_x, double scale_y, double rotation, double diff_x, double diff_y) {
 		Identifier t;
 		if (vanilla) {
-			t=Identifier.ofVanilla(texture);
+			t=Identifier.withDefaultNamespace(texture);
 		} else {
-			t=Identifier.of(MinescriptHUDAddon.MOD_ID,texture);
+			t=Identifier.fromNamespaceAndPath(MinescriptHUDAddon.MOD_ID,texture);
 		}
 		int i=this.getId();
 		elements.put(i, new TextureObject(t, x, y, width, height, (float) alpha, displayDuration, layer,scale_x,scale_y,rotation,diff_x,diff_y));
@@ -302,9 +302,9 @@ public class DrawHelper {
 	public void updateTexture(int id, String texture, boolean vanilla, int x, int y, int width, int height, double alpha, double displayDurationModifier, int layer, double scale_x, double scale_y, double rotation, double diff_x, double diff_y) {
 		Identifier t;
 		if (vanilla) {
-			t=Identifier.ofVanilla(texture);
+			t=Identifier.withDefaultNamespace(texture);
 		} else {
-			t=Identifier.of(MinescriptHUDAddon.MOD_ID,texture);
+			t=Identifier.fromNamespaceAndPath(MinescriptHUDAddon.MOD_ID,texture);
 		}
 		elementUpdates.put(id,new TextureObjectUpdate(t,x,y, width, height, (float) alpha,displayDurationModifier,layer,scale_x,scale_y,rotation,diff_x,diff_y));
 	}
@@ -340,8 +340,8 @@ public class DrawHelper {
 
 
 
-	public void tick(RenderTickCounter renderTickCounter) {
-		float deltaSeconds = renderTickCounter.getDynamicDeltaTicks()/20.0f;
+	public void tick(DeltaTracker renderTickCounter) {
+		float deltaSeconds = renderTickCounter.getGameTimeDeltaTicks()/20.0f;
 
 		Iterator<Map.Entry<Integer, Layered>> iter=elements.entrySet().iterator();
 		while (iter.hasNext()) {
@@ -368,52 +368,52 @@ public class DrawHelper {
 		return elements.values().stream().collect(Collectors.groupingBy(Layered::getLayer));
 	}
 
-	public void renderElement(DrawContext context,MinecraftClient client, Layered element) {
+	public void renderElement(GuiGraphicsExtractor context, Minecraft client, Layered element) {
 		switch (element) {
 			case TextObject t ->
-				context.drawText(client.textRenderer, t.getText(), t.getX(), t.getY(), t.getColor(), t.getShadow());
+				context.text(client.font, t.getText(), t.getX(), t.getY(), t.getColor(), t.getShadow());
 			case RectangleObject b ->
 				context.fill(b.getStartX(), b.getStartY(), b.getEndX(), b.getEndY(), b.getColor());
 			case GradientRectangleObject b ->
 				context.fillGradient(b.getStartX(),b.getStartY(),b.getEndX(),b.getEndY(),b.getStartColor(),b.getEndColor());
 			case StrokedRectangleObject b ->
-				context.drawStrokedRectangle(b.getX(),b.getY(),b.getWidth(),b.getHeight(),b.getColor());
+				context.outline(b.getX(),b.getY(),b.getWidth(),b.getHeight(),b.getColor());
 			case TextWithBackgroundObject t -> {
-				context.fill(t.getX()-t.getMarginX(), t.getY()-t.getMarginY(), t.getX()+client.textRenderer.getWidth(t.getText())-1+t.getMarginX(), t.getY()+client.textRenderer.fontHeight-2+t.getMarginY(), t.getBgColor());
-				context.drawText(client.textRenderer, t.getText(), t.getX(), t.getY(), t.getColor(), t.getShadow());
+				context.fill(t.getX()-t.getMarginX(), t.getY()-t.getMarginY(), t.getX()+client.font.width(t.getText())-1+t.getMarginX(), t.getY()+client.font.lineHeight-2+t.getMarginY(), t.getBgColor());
+				context.text(client.font, t.getText(), t.getX(), t.getY(), t.getColor(), t.getShadow());
 			}
 			case ItemObject i -> {
-				context.drawItem(i.getItem(), i.getX(), i.getY());
-				context.drawStackOverlay(client.textRenderer,i.getItem(),i.getX(),i.getY());
+				context.item(i.getItem(), i.getX(), i.getY());
+				context.itemDecorations(client.font,i.getItem(),i.getX(),i.getY());
 			}
 			case TextureObject t ->
-				context.drawGuiTexture(RenderPipelines.GUI_TEXTURED,t.getTexture(),t.getX(),t.getY(),t.getWidth(),t.getHeight(),t.getAlpha());
+				context.blitSprite(RenderPipelines.GUI_TEXTURED,t.getTexture(),t.getX(),t.getY(),t.getWidth(),t.getHeight(),t.getAlpha());
 			case ShapeObject s ->
-				context.state.addSimpleElement(new ShapeGuiElementRenderState(RenderPipelines.GUI, TextureSetup.empty(), new Matrix3x2f(context.getMatrices()), s.getVertices(), context.scissorStack.peekLast(), s.getBounds()));
+				context.guiRenderState.addGuiElement(new ShapeGuiElementRenderState(RenderPipelines.GUI, TextureSetup.noTexture(), new Matrix3x2f(context.pose()), s.getVertices(), context.scissorStack.peek(), s.getBounds()));
 			default -> throw new IllegalStateException("Unexpected value: " + element);
 		}
 	}
 
-	public void render(DrawContext context) {
-		final MinecraftClient client=MinecraftClient.getInstance();
+	public void render(GuiGraphicsExtractor context) {
+		final Minecraft client=Minecraft.getInstance();
 		Map<Integer,List<Layered>> layers=this.getElementsSortedByLayer();
-		context.getMatrices().pushMatrix();
+		context.pose().pushMatrix();
 		for (List<Layered> layer:layers.values()) {
 			for (Layered element:layer) {
-				context.getMatrices().set(element.getMatrix());
+				context.pose().set(element.getMatrix());
 				this.renderElement(context,client,element);
 			}
 		}
-		context.getMatrices().popMatrix();
+		context.pose().popMatrix();
 	}
 
-	public void draw(DrawContext context, RenderTickCounter renderTickCounter) {
+	public void draw(GuiGraphicsExtractor context, DeltaTracker renderTickCounter) {
 		ScriptFrameWaiter.getInstance().onEndFrame();
 		this.update();
 		this.tick(renderTickCounter);
 		this.render(context);
-		windowWidth=context.getScaledWindowWidth();
-		windowHeight=context.getScaledWindowHeight();
+		windowWidth=context.guiWidth();
+		windowHeight=context.guiHeight();
 	}
 
 
@@ -441,12 +441,12 @@ public class DrawHelper {
 		public boolean middle;
 		public boolean right;
 
-		public JsonableMouseObject(Mouse from) {
-			this.x=from.getScaledX(MinecraftClient.getInstance().getWindow());
-			this.y=from.getScaledY(MinecraftClient.getInstance().getWindow());
-			this.left=from.wasLeftButtonClicked();
-			this.middle=from.wasMiddleButtonClicked();
-			this.right=from.wasRightButtonClicked();
+		public JsonableMouseObject(MouseHandler from) {
+			this.x=from.getScaledXPos(Minecraft.getInstance().getWindow());
+			this.y=from.getScaledYPos(Minecraft.getInstance().getWindow());
+			this.left=from.isLeftPressed();
+			this.middle=from.isMiddlePressed();
+			this.right=from.isRightPressed();
 		}
 	}
 
@@ -486,8 +486,8 @@ public class DrawHelper {
 			this.rotation=from.getMatrixInfo().get("rotation");
 			this.diff_x=from.getMatrixInfo().get("diff_x");
 			this.diff_y=from.getMatrixInfo().get("diff_y");
-			this.width=(int)(MinecraftClient.getInstance().textRenderer.getWidth(this.text)*this.scale_x);
-			this.height=(int)(MinecraftClient.getInstance().textRenderer.fontHeight*this.scale_y);
+			this.width=(int)(Minecraft.getInstance().font.width(this.text)*this.scale_x);
+			this.height=(int)(Minecraft.getInstance().font.lineHeight*this.scale_y);
 		}
 	}
 
@@ -529,7 +529,7 @@ public class DrawHelper {
 			to.setDisplayDuration(Double.min(to.getDisplayDuration()+this.displayDurationModifier,Double.MAX_VALUE-1));
 			to.setLayer(this.layer);
 			to.getMatrixInfo().put("scale_x",this.scale_x);to.getMatrixInfo().put("scale_y",this.scale_y);to.getMatrixInfo().put("rotation",this.rotation);to.getMatrixInfo().put("diff_x",this.diff_x);to.getMatrixInfo().put("diff_y",this.diff_y);
-			to.setMatrix(DrawHelper.createMatrix(x,y,MinecraftClient.getInstance().textRenderer.getWidth(text),MinecraftClient.getInstance().textRenderer.fontHeight,scale_x,scale_y,rotation,diff_x,diff_y));
+			to.setMatrix(DrawHelper.createMatrix(x,y,Minecraft.getInstance().font.width(text),Minecraft.getInstance().font.lineHeight,scale_x,scale_y,rotation,diff_x,diff_y));
 		}
 	}
 
@@ -563,7 +563,7 @@ public class DrawHelper {
 			this.shadow=shadow;
 			this.displayDuration=displayDuration;
 			this.matrix_info.put("scale_x",scale_x);this.matrix_info.put("scale_y",scale_y);this.matrix_info.put("rotation",rotation);this.matrix_info.put("diff_x",diff_x);this.matrix_info.put("diff_y",diff_y);
-			this.matrix=DrawHelper.createMatrix(x,y,MinecraftClient.getInstance().textRenderer.getWidth(text),MinecraftClient.getInstance().textRenderer.fontHeight,scale_x,scale_y,rotation,diff_x,diff_y);
+			this.matrix=DrawHelper.createMatrix(x,y,Minecraft.getInstance().font.width(text),Minecraft.getInstance().font.lineHeight,scale_x,scale_y,rotation,diff_x,diff_y);
 			this.layer=layer;
 		}
 
@@ -1153,8 +1153,8 @@ public class DrawHelper {
 			this.rotation=from.getMatrixInfo().get("rotation");
 			this.diff_x=from.getMatrixInfo().get("diff_x");
 			this.diff_y=from.getMatrixInfo().get("diff_y");
-			this.width=(int)(MinecraftClient.getInstance().textRenderer.getWidth(this.text)*this.scale_x);
-			this.height=(int)(MinecraftClient.getInstance().textRenderer.fontHeight*this.scale_y);
+			this.width=(int)(Minecraft.getInstance().font.width(this.text)*this.scale_x);
+			this.height=(int)(Minecraft.getInstance().font.lineHeight*this.scale_y);
 		}
 	}
 
@@ -1205,7 +1205,7 @@ public class DrawHelper {
 			to.setDisplayDuration(Double.min(to.getDisplayDuration()+this.displayDurationModifier,Double.MAX_VALUE-1));
 			to.setLayer(this.layer);
 			to.getMatrixInfo().put("scale_x",this.scale_x);to.getMatrixInfo().put("scale_y",this.scale_y);to.getMatrixInfo().put("rotation",this.rotation);to.getMatrixInfo().put("diff_x",this.diff_x);to.getMatrixInfo().put("diff_y",this.diff_y);
-			to.setMatrix(DrawHelper.createMatrix(x,y,MinecraftClient.getInstance().textRenderer.getWidth(text),MinecraftClient.getInstance().textRenderer.fontHeight,scale_x,scale_y,rotation,diff_x,diff_y));
+			to.setMatrix(DrawHelper.createMatrix(x,y,Minecraft.getInstance().font.width(text),Minecraft.getInstance().font.lineHeight,scale_x,scale_y,rotation,diff_x,diff_y));
 		}
 	}
 
@@ -1248,7 +1248,7 @@ public class DrawHelper {
 			this.shadow=shadow;
 			this.displayDuration=displayDuration;
 			this.matrix_info.put("scale_x",scale_x);this.matrix_info.put("scale_y",scale_y);this.matrix_info.put("rotation",rotation);this.matrix_info.put("diff_x",diff_x);this.matrix_info.put("diff_y",diff_y);
-			this.matrix=DrawHelper.createMatrix(x,y,MinecraftClient.getInstance().textRenderer.getWidth(text),MinecraftClient.getInstance().textRenderer.fontHeight,scale_x,scale_y,rotation,diff_x,diff_y);
+			this.matrix=DrawHelper.createMatrix(x,y,Minecraft.getInstance().font.width(text),Minecraft.getInstance().font.lineHeight,scale_x,scale_y,rotation,diff_x,diff_y);
 		}
 
 		public String getText() {
@@ -1369,7 +1369,7 @@ public class DrawHelper {
 			if (Objects.isNull(from)) {
 				return;
 			}
-			this.item=Registries.ITEM.getId(from.getItem().getItem()).getPath();
+			this.item=BuiltInRegistries.ITEM.getKey(from.getItem().getItem()).getPath();
 			this.x=from.getX();
 			this.y=from.getY();
 			this.scale_x=from.getMatrixInfo().get("scale_x");
@@ -1766,13 +1766,13 @@ public class DrawHelper {
 			to.setDisplayDuration(Double.min(to.getDisplayDuration()+this.displayDurationModifier,Double.MAX_VALUE-1));
 			to.setLayer(this.layer);
 			to.getMatrixInfo().put("scale_x",this.scale_x);to.getMatrixInfo().put("scale_y",this.scale_y);to.getMatrixInfo().put("rotation",this.rotation);to.getMatrixInfo().put("diff_x",this.diff_x);to.getMatrixInfo().put("diff_y",this.diff_y);
-			to.setMatrix(DrawHelper.createMatrix(to.getBounds().getLeft(),to.getBounds().getTop(),to.getBounds().width(),to.getBounds().height(),scale_x,scale_y,rotation,diff_x,diff_y));
+			to.setMatrix(DrawHelper.createMatrix(to.getBounds().left(),to.getBounds().top(),to.getBounds().width(),to.getBounds().height(),scale_x,scale_y,rotation,diff_x,diff_y));
 		}
 	}
 
 	public static class ShapeObject implements Layered {
 		private List<Vertex> vertices;
-		private ScreenRect bounds;
+		private ScreenRectangle bounds;
 		private double displayDuration;
 		private final Map<String, Double> matrix_info=new HashMap<>();
 		private Matrix3x2f matrix;
@@ -1790,11 +1790,11 @@ public class DrawHelper {
 			this.bounds=this.createBounds();
 			this.displayDuration=displayDuration;
 			this.matrix_info.put("scale_x",scale_x);this.matrix_info.put("scale_y",scale_y);this.matrix_info.put("rotation",rotation);this.matrix_info.put("diff_x",diff_x);this.matrix_info.put("diff_y",diff_y);
-			this.matrix=DrawHelper.createMatrix(bounds.getLeft(),bounds.getTop(),bounds.width(),bounds.height(),scale_x,scale_y,rotation,diff_x,diff_y);
+			this.matrix=DrawHelper.createMatrix(bounds.left(),bounds.top(),bounds.width(),bounds.height(),scale_x,scale_y,rotation,diff_x,diff_y);
 			this.layer=layer;
 		}
 
-		private ScreenRect createBounds() {
+		private ScreenRectangle createBounds() {
 			int left=Integer.MAX_VALUE,right=0,top=Integer.MAX_VALUE,bottom=0;
 			for (Vertex v:vertices) {
 				if (v.x()>right) right=v.x();
@@ -1802,7 +1802,7 @@ public class DrawHelper {
 				if (v.y()>bottom) bottom=v.y();
 				if (v.y()<top) top=v.y();
 			}
-			return new ScreenRect(left,top,right-left,bottom-top);
+			return new ScreenRectangle(left,top,right-left,bottom-top);
 		}
 
 		public List<Vertex> getVertices() {
@@ -1813,7 +1813,7 @@ public class DrawHelper {
 			vertices=newVertices;
 		}
 
-		public ScreenRect getBounds() {
+		public ScreenRectangle getBounds() {
 			return bounds;
 		}
 
