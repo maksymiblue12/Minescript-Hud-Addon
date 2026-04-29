@@ -1247,6 +1247,7 @@ public class DrawHelper {
 			this.bgColor=bgColor;
 			this.shadow=shadow;
 			this.displayDuration=displayDuration;
+			this.layer=layer;
 			this.matrix_info.put("scale_x",scale_x);this.matrix_info.put("scale_y",scale_y);this.matrix_info.put("rotation",rotation);this.matrix_info.put("diff_x",diff_x);this.matrix_info.put("diff_y",diff_y);
 			this.matrix=DrawHelper.createMatrix(x,y,MinecraftClient.getInstance().textRenderer.getWidth(text),MinecraftClient.getInstance().textRenderer.fontHeight,scale_x,scale_y,rotation,diff_x,diff_y);
 		}
