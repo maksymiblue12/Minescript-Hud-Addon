@@ -1,11 +1,15 @@
 package net.mb.minescripthud;
 
+import com.google.gson.JsonNull;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import net.mb.minescripthud.util.MouseListener;
+import net.mb.minescripthud.util.MouseTracker;
 import net.mb.minescripthud.util.ShapeGuiElementRenderState;
 import net.mb.minescripthud.util.Vertex;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.Mouse;
 import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.ScreenRect;
@@ -17,6 +21,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
 import net.minecraft.util.Identifier;
 import net.minescript.common.Jsonable;
+import net.minescript.common.ScriptValue;
 import org.joml.*;
 
 import java.util.*;
@@ -26,6 +31,7 @@ public class DrawHelper {
 	private static final DrawHelper INSTANCE=new DrawHelper();
 	private final Map<Integer,Layered> elements=new HashMap<>();
 	private final Map<Integer,LayeredUpdate> elementUpdates=new HashMap<>();
+	private final Map<Integer, MouseListener> mouseListeners=new HashMap<>();
 	private int currentId=0;
 	public int windowWidth=0;
 	public int windowHeight=0;
@@ -43,19 +49,18 @@ public class DrawHelper {
 	public void clear() {
 		elements.clear();
 		elementUpdates.clear();
+		mouseListeners.forEach((id, mouseListener)-> mouseListener.cancel());
+		mouseListeners.clear();
 	}
 
 	public void removeElement(int id) {
 		elements.remove(id);
 		elementUpdates.remove(id);
+		mouseListeners.remove(id);
 	}
 
 	public boolean stillExists(int id) {
 		return elements.containsKey(id);
-	}
-
-	public JsonableMouseObject getMouse() {
-		return new JsonableMouseObject(MinecraftClient.getInstance().mouse);
 	}
 
 	private ItemStack getItemStack(String item) throws CommandSyntaxException {
@@ -116,19 +121,24 @@ public class DrawHelper {
 			if (!elements.containsKey(id)) {
 				return new JsonableElements(out,false);
 			}
-			switch (elements.get(id)) {
-				case TextObject t -> out.put(id,new JsonableTextObject(t));
-				case RectangleObject r -> out.put(id,new JsonableRectangleObject(r));
-				case GradientRectangleObject r -> out.put(id,new JsonableGradientRectangleObject(r));
-				case StrokedRectangleObject r -> out.put(id,new JsonableStrokedRectangleObject(r));
-				case TextWithBackgroundObject t -> out.put(id,new JsonableTextWithBackgroundObject(t));
-				case ItemObject t -> out.put(id,new JsonableItemObject(t));
-				case TextureObject t -> out.put(id,new JsonableTextureObject(t));
-				case ShapeObject t -> out.put(id,new JsonableShapeObject(t));
-				default -> {}
-			}
+			out.put(id,elements.get(id).toJsonable());
 		}
 		return new JsonableElements(out,true);
+	}
+
+	public void addMouseListener(int id, MouseListener listener) {
+		mouseListeners.put(id,listener);
+	}
+
+	public MouseListener getMouseListener(int id) {
+		return mouseListeners.get(id);
+	}
+
+	public Jsonable getElement(int id) {
+		if (elements.containsKey(id)) {
+			return elements.get(id).toJsonable();
+		}
+		return null;
 	}
 
 
@@ -147,10 +157,6 @@ public class DrawHelper {
 		return i;
 	}
 
-	public JsonableTextObject getTextObject(int id) {
-		return new JsonableTextObject((TextObject) elements.get(id));
-	}
-
 	public void updateText(int id, String text, int x, int y, int color, boolean shadow, double displayDurationModifier, int layer, double scale_x, double scale_y, double rotation, double diff_x, double diff_y) {
 		elementUpdates.put(id,new TextObjectUpdate(text,x,y,color,shadow,displayDurationModifier,layer,scale_x,scale_y,rotation,diff_x,diff_y));
 	}
@@ -165,10 +171,6 @@ public class DrawHelper {
 		return i;
 	}
 
-	public JsonableRectangleObject getRectangleObject(int id) {
-		return new JsonableRectangleObject((RectangleObject) elements.get(id));
-	}
-
 	public void updateRectangle(int id, int sx, int sy, int ex, int ey, int color, double displayDurationModifier, int layer) {
 		elementUpdates.put(id,new RectangleObjectUpdate(sx,sy,ex,ey,color,displayDurationModifier,layer));
 	}
@@ -179,10 +181,6 @@ public class DrawHelper {
 		return i;
 	}
 
-	public JsonableGradientRectangleObject getGradientRectangleObject(int id) {
-		return new JsonableGradientRectangleObject((GradientRectangleObject) elements.get(id));
-	}
-
 	public void updateGradientRectangle(int id, int sx, int sy, int ex, int ey, int startColor, int endColor, double displayDurationModifier, int layer) {
 		elementUpdates.put(id,new GradientRectangleObjectUpdate(sx,sy,ex,ey,startColor,endColor,displayDurationModifier,layer));
 	}
@@ -191,10 +189,6 @@ public class DrawHelper {
 		int i=this.getId();
 		elements.put(i,new StrokedRectangleObject(sx,sy,ex,ey,startColor,displayDuration,layer));
 		return i;
-	}
-
-	public JsonableStrokedRectangleObject getStrokedRectangleObject(int id) {
-		return new JsonableStrokedRectangleObject((StrokedRectangleObject) elements.get(id));
 	}
 
 	public void updateStrokedRectangle(int id, int sx, int sy, int ex, int ey, int startColor, double displayDurationModifier, int layer) {
@@ -215,10 +209,6 @@ public class DrawHelper {
 		int i=this.getId();
 		elements.put(i, new TextWithBackgroundObject(text, x, y, marginX, marginY, color, bgColor, shadow, displayDuration, layer,scale_x,scale_y,rotation,diff_x,diff_y));
 		return i;
-	}
-
-	public JsonableTextWithBackgroundObject getTextWithBackgroundObject(int id) {
-		return new JsonableTextWithBackgroundObject((TextWithBackgroundObject) elements.get(id));
 	}
 
 	public void updateTextWithBackground(int id, String text, int x, int y, int marginX, int marginY, int color, int bgColor, boolean shadow, double displayDurationModifier, int layer, double scale_x, double scale_y, double rotation, double diff_x, double diff_y) {
@@ -251,10 +241,6 @@ public class DrawHelper {
 		int i=this.getId();
 		elements.put(i, new ItemObject(itemStack, x, y, displayDuration, layer,scale_x,scale_y,rotation,diff_x,diff_y));
 		return i;
-	}
-
-	public JsonableItemObject getItemObject(int id) {
-		return new JsonableItemObject((ItemObject) elements.get(id));
 	}
 
 	public void updateItem(int id, String item, int x, int y, double displayDurationModifier, int layer, double scale_x, double scale_y, double rotation, double diff_x, double diff_y) {
@@ -295,10 +281,6 @@ public class DrawHelper {
 		return i;
 	}
 
-	public JsonableTextureObject getTextureObject(int id) {
-		return new JsonableTextureObject((TextureObject) elements.get(id));
-	}
-
 	public void updateTexture(int id, String texture, boolean vanilla, int x, int y, int width, int height, double alpha, double displayDurationModifier, int layer, double scale_x, double scale_y, double rotation, double diff_x, double diff_y) {
 		Identifier t;
 		if (vanilla) {
@@ -327,10 +309,6 @@ public class DrawHelper {
 		return i;
 	}
 
-	public JsonableShapeObject getShapeObject(int id) {
-		return new JsonableShapeObject((ShapeObject) elements.get(id));
-	}
-
 	public void updateShape(int id, List<Map<String, Double>> vertices, double displayDurationModifier, int layer, double scale_x, double scale_y, double rotation, double diff_x, double diff_y) {
 		List<Vertex> verticesFormated=vertices.stream().map(v -> new Vertex(v.get("x").intValue(),v.get("y").intValue(),v.get("color").intValue())).toList();
 		elementUpdates.put(id,new ShapeObjectUpdate(verticesFormated,displayDurationModifier,layer,scale_x,scale_y,rotation,diff_x,diff_y));
@@ -349,12 +327,15 @@ public class DrawHelper {
 			Layered t=entry.getValue();
 			t.setDisplayDuration(t.getDisplayDuration()-deltaSeconds);
 			if (t.getDisplayDuration()<=0) {
+				elementUpdates.remove(entry.getKey());
+				mouseListeners.get(entry.getKey()).cancel();
+				mouseListeners.remove(entry.getKey());
 				iter.remove();
 			}
 		}
 		if (elements.isEmpty()) {
 			currentId=0;
-			elementUpdates.clear();
+			clear();
 		}
 	}
 
@@ -364,20 +345,67 @@ public class DrawHelper {
 		}
 	}
 
+	public void checkMouse() {
+		if (MouseTracker.getInstance().isCursorLocked()) {
+			return;
+		}
+		for (Map.Entry<Integer, Layered> element:elements.entrySet()) {
+			Integer id=element.getKey();
+			Layered obj=element.getValue();
+			if (!mouseListeners.containsKey(id)) {
+				continue;
+			} else if (!mouseListeners.get(id).isActive()) {
+				continue;
+			}
+			if (obj.containsPoint(MouseTracker.getInstance().getX(), MouseTracker.getInstance().getY())) {
+				obj.setHovering(true);
+				JsonObject data=new JsonObject();
+				data.add("object",obj.toJsonable().toJson());
+				data.add("object_type",new JsonPrimitive(obj.getObjectType()));
+				try {
+					data.add("mouse",MouseTracker.getInstance().toJsonable().toJson());
+				} catch (IllegalArgumentException e) {
+					data.add("mouse",JsonNull.INSTANCE);
+				}
+				data.add("exited",new JsonPrimitive(false));
+				data.add("event_type",new JsonPrimitive("hover"));
+				mouseListeners.get(id).respond(ScriptValue.of(data,()-> data));
+				if (MouseTracker.getInstance().anyButtonClicked()) {
+					MinescriptHUDAddon.LOGGER.warn("clicked");
+					data.add("event_type",new JsonPrimitive("click"));
+					mouseListeners.get(id).respond(ScriptValue.of(data,()-> data));
+				}
+			} else if (obj.getHovering()) {
+				obj.setHovering(false);
+				JsonObject data=new JsonObject();
+				data.add("object",obj.toJsonable().toJson());
+				data.add("object_type",new JsonPrimitive(obj.getObjectType()));
+				try {
+					data.add("mouse", MouseTracker.getInstance().toJsonable().toJson());
+				} catch (IllegalArgumentException e) {
+					data.add("mouse",JsonNull.INSTANCE);
+				}
+				data.add("exited",new JsonPrimitive(true));
+				data.add("event_type",new JsonPrimitive("hover"));
+				mouseListeners.get(id).respond(ScriptValue.of(data,()->data));
+			}
+		}
+	}
+
 	private Map<Integer,List<Layered>> getElementsSortedByLayer() {
 		return elements.values().stream().collect(Collectors.groupingBy(Layered::getLayer));
 	}
 
-	public void renderElement(DrawContext context,MinecraftClient client, Layered element) {
+	public void renderElement(DrawContext context, MinecraftClient client, Layered element) {
 		switch (element) {
 			case TextObject t ->
-				context.drawText(client.textRenderer, t.getText(), t.getX(), t.getY(), t.getColor(), t.getShadow());
+					context.drawText(client.textRenderer, t.getText(), t.getX(), t.getY(), t.getColor(), t.getShadow());
 			case RectangleObject b ->
-				context.fill(b.getStartX(), b.getStartY(), b.getEndX(), b.getEndY(), b.getColor());
+					context.fill(b.getStartX(), b.getStartY(), b.getEndX(), b.getEndY(), b.getColor());
 			case GradientRectangleObject b ->
-				context.fillGradient(b.getStartX(),b.getStartY(),b.getEndX(),b.getEndY(),b.getStartColor(),b.getEndColor());
+					context.fillGradient(b.getStartX(),b.getStartY(),b.getEndX(),b.getEndY(),b.getStartColor(),b.getEndColor());
 			case StrokedRectangleObject b ->
-				context.drawStrokedRectangle(b.getX(),b.getY(),b.getWidth(),b.getHeight(),b.getColor());
+					context.drawStrokedRectangle(b.getX(),b.getY(),b.getWidth(),b.getHeight(),b.getColor());
 			case TextWithBackgroundObject t -> {
 				context.fill(t.getX()-t.getMarginX(), t.getY()-t.getMarginY(), t.getX()+client.textRenderer.getWidth(t.getText())-1+t.getMarginX(), t.getY()+client.textRenderer.fontHeight-2+t.getMarginY(), t.getBgColor());
 				context.drawText(client.textRenderer, t.getText(), t.getX(), t.getY(), t.getColor(), t.getShadow());
@@ -387,9 +415,9 @@ public class DrawHelper {
 				context.drawStackOverlay(client.textRenderer,i.getItem(),i.getX(),i.getY());
 			}
 			case TextureObject t ->
-				context.drawGuiTexture(RenderPipelines.GUI_TEXTURED,t.getTexture(),t.getX(),t.getY(),t.getWidth(),t.getHeight(),t.getAlpha());
+					context.drawGuiTexture(RenderPipelines.GUI_TEXTURED,t.getTexture(),t.getX(),t.getY(),t.getWidth(),t.getHeight(),t.getAlpha());
 			case ShapeObject s ->
-				context.state.addSimpleElement(new ShapeGuiElementRenderState(RenderPipelines.GUI, TextureSetup.empty(), new Matrix3x2f(context.getMatrices()), s.getVertices(), context.scissorStack.peekLast(), s.getBounds()));
+					context.state.addSimpleElement(new ShapeGuiElementRenderState(RenderPipelines.GUI, TextureSetup.empty(), new Matrix3x2f(context.getMatrices()), s.getVertices(), context.scissorStack.peekLast(), s.getBounds()));
 			default -> throw new IllegalStateException("Unexpected value: " + element);
 		}
 	}
@@ -409,9 +437,11 @@ public class DrawHelper {
 
 	public void draw(DrawContext context, RenderTickCounter renderTickCounter) {
 		ScriptFrameWaiter.getInstance().onEndFrame();
+		MouseTracker.getInstance().update();
 		this.update();
 		this.tick(renderTickCounter);
 		this.render(context);
+		this.checkMouse();
 		windowWidth=context.getScaledWindowWidth();
 		windowHeight=context.getScaledWindowHeight();
 	}
@@ -420,34 +450,68 @@ public class DrawHelper {
 
 
 
-	public interface Layered {
-		int getLayer();
-		void setLayer(int newLayer);
-		Matrix3x2f getMatrix();
-		void setMatrix(Matrix3x2f newMatrix);
-		Map<String,Double> getMatrixInfo();
-		double getDisplayDuration();
-		void setDisplayDuration(double newDisplayDuration);
+	public static abstract class Layered {
+		private double displayDuration;
+		private int layer;
+		private final Map<String, Double> matrix_info=new HashMap<>();
+		private Matrix3x2f matrix;
+		private boolean hovering=false;
+		private Layered(double displayDuration, int layer) {
+			this.displayDuration=displayDuration;
+			this.layer=layer;
+			this.matrix_info.put("scale_x",1d);this.matrix_info.put("scale_y",1d);this.matrix_info.put("rotation",0d);this.matrix_info.put("diff_x",0d);this.matrix_info.put("diff_y",0d);
+			this.matrix=new Matrix3x2f();
+		}
+
+		private Layered(double displayDuration, int layer, double scale_x, double scale_y, double rotation, double diff_x, double diff_y) {
+			this.displayDuration=displayDuration;
+			this.layer=layer;
+			this.matrix_info.put("scale_x",scale_x);this.matrix_info.put("scale_y",scale_y);this.matrix_info.put("rotation",rotation);this.matrix_info.put("diff_x",diff_x);this.matrix_info.put("diff_y",diff_y);
+		}
+
+		Matrix3x2f createMatrix(double scale_x, double scale_y, double rotation, double diff_x, double diff_y) {
+			return new Matrix3x2f();
+		}
+		int getLayer() {
+			return this.layer;
+		}
+		void setLayer(int newLayer) {
+			this.layer=newLayer;
+		}
+		Matrix3x2f getMatrix() {
+			return this.matrix;
+		}
+		void setMatrix(Matrix3x2f newMatrix) {
+			this.matrix=newMatrix;
+		}
+		Map<String, Double> getMatrixInfo() {
+			return this.matrix_info;
+		}
+		double getDisplayDuration() {
+			return this.displayDuration;
+		}
+		void setDisplayDuration(double newDisplayDuration) {
+			this.displayDuration=newDisplayDuration;
+		}
+		boolean getHovering() {
+			return this.hovering;
+		}
+		void setHovering(boolean newHovering) {
+			this.hovering=newHovering;
+		}
+		boolean containsPoint(double x, double y) {
+			return false;
+		}
+		Jsonable toJsonable() {
+			return null;
+		}
+		String getObjectType() {
+			return "";
+		}
 	}
 
 	public interface LayeredUpdate {
 		void applyTo(Layered target);
-	}
-
-	public static class JsonableMouseObject extends Jsonable {
-		public double x;
-		public double y;
-		public boolean left;
-		public boolean middle;
-		public boolean right;
-
-		public JsonableMouseObject(Mouse from) {
-			this.x=from.getScaledX(MinecraftClient.getInstance().getWindow());
-			this.y=from.getScaledY(MinecraftClient.getInstance().getWindow());
-			this.left=from.wasLeftButtonClicked();
-			this.middle=from.wasMiddleButtonClicked();
-			this.right=from.wasRightButtonClicked();
-		}
 	}
 
 
@@ -533,38 +597,29 @@ public class DrawHelper {
 		}
 	}
 
-	public static class TextObject implements Layered {
+	public static class TextObject extends Layered {
 		private String text;
 		private int x;
 		private int y;
 		private int color;
 		private boolean shadow;
-		private double displayDuration;
-		private final Map<String, Double> matrix_info=new HashMap<>();
-		private Matrix3x2f matrix;
-		private int layer;
 		public TextObject(String text, int x, int y, int color, boolean shadow, double displayDuration, int layer) {
+			super(displayDuration,layer);
 			this.text=text;
 			this.x=x;
 			this.y=y;
 			this.color=color;
 			this.shadow=shadow;
-			this.displayDuration=displayDuration;
-			this.matrix_info.put("scale_x",1d);this.matrix_info.put("scale_y",1d);this.matrix_info.put("rotation",0d);this.matrix_info.put("diff_x",0d);this.matrix_info.put("diff_y",0d);
-			this.matrix=new Matrix3x2f();
-			this.layer=layer;
 		}
 
 		public TextObject(String text, int x, int y, int color, boolean shadow, double displayDuration, int layer, double scale_x, double scale_y, double rotation, double diff_x, double diff_y) {
+			super(displayDuration,layer,scale_x,scale_y,rotation,diff_x,diff_y);
 			this.text=text;
 			this.x=x;
 			this.y=y;
 			this.color=color;
 			this.shadow=shadow;
-			this.displayDuration=displayDuration;
-			this.matrix_info.put("scale_x",scale_x);this.matrix_info.put("scale_y",scale_y);this.matrix_info.put("rotation",rotation);this.matrix_info.put("diff_x",diff_x);this.matrix_info.put("diff_y",diff_y);
-			this.matrix=DrawHelper.createMatrix(x,y,MinecraftClient.getInstance().textRenderer.getWidth(text),MinecraftClient.getInstance().textRenderer.fontHeight,scale_x,scale_y,rotation,diff_x,diff_y);
-			this.layer=layer;
+			this.setMatrix(this.createMatrix(scale_x, scale_y, rotation, diff_x, diff_y));
 		}
 
 		public String getText() {
@@ -607,38 +662,30 @@ public class DrawHelper {
 			shadow=newShadow;
 		}
 
-		public Matrix3x2f getMatrix() {
-			return matrix;
+		@Override
+		public boolean containsPoint(double x, double y) {
+			Matrix3x2f inverse=new Matrix3x2f();
+			this.getMatrix().invert(inverse);
+			Vector2f point=new Vector2f((float)x,(float)y);
+			Vector2f topLeft=new Vector2f((float)this.x,(float)this.y);
+			Vector2f bottomRight=new Vector2f((float)this.x+MinecraftClient.getInstance().textRenderer.getWidth(this.text),(float)this.y+MinecraftClient.getInstance().textRenderer.fontHeight);
+			inverse.transformPosition(point);
+			return topLeft.x<=point.x && point.x<=bottomRight.x && topLeft.y<=point.y && point.y<=bottomRight.y;
 		}
 
 		@Override
-		public double getDisplayDuration() {
-			return displayDuration;
+		public Jsonable toJsonable() {
+			return new JsonableTextObject(this);
 		}
 
 		@Override
-		public void setDisplayDuration(double newDisplayDuration) {
-			displayDuration=newDisplayDuration;
+		public String getObjectType() {
+			return "text";
 		}
 
 		@Override
-		public void setMatrix(Matrix3x2f newMatrix) {
-			matrix=newMatrix;
-		}
-
-		@Override
-		public Map<String,Double> getMatrixInfo() {
-			return matrix_info;
-		}
-
-		@Override
-		public int getLayer() {
-			return layer;
-		}
-
-		@Override
-		public void setLayer(int newLayer) {
-			layer=newLayer;
+		Matrix3x2f createMatrix(double scale_x, double scale_y, double rotation, double diff_x, double diff_y) {
+			return DrawHelper.createMatrix(x,y,MinecraftClient.getInstance().textRenderer.getWidth(text),MinecraftClient.getInstance().textRenderer.fontHeight,scale_x,scale_y,rotation,diff_x,diff_y);
 		}
 	}
 
@@ -703,23 +750,20 @@ public class DrawHelper {
 		}
 	}
 
-	public static class RectangleObject implements Layered {
+	public static class RectangleObject extends Layered {
 		private int sx;
 		private int sy;
 		private int ex;
 		private int ey;
 		private int color;
-		private double displayDuration;
-		private int layer;
 
 		public RectangleObject(int sx, int sy, int ex, int ey, int color, double displayDuration, int layer) {
+			super(displayDuration,layer);
 			this.sx=sx;
 			this.sy=sy;
 			this.ex=ex;
 			this.ey=ey;
 			this.color=color;
-			this.displayDuration=displayDuration;
-			this.layer=layer;
 		}
 
 		public int getStartX() {
@@ -763,36 +807,18 @@ public class DrawHelper {
 		}
 
 		@Override
-		public int getLayer() {
-			return layer;
+		public boolean containsPoint(double x, double y) {
+			return sx<=x && x<=ex && sy<=y && y<=ey;
 		}
 
 		@Override
-		public void setLayer(int newLayer) {
-			layer=newLayer;
+		public Jsonable toJsonable() {
+			return new JsonableRectangleObject(this);
 		}
 
 		@Override
-		public Matrix3x2f getMatrix() {
-			return new Matrix3x2f();
-		}
-
-		@Override
-		public void setMatrix(Matrix3x2f newMatrix) {}
-
-		@Override
-		public Map<String, Double> getMatrixInfo() {
-			return Map.of();
-		}
-
-		@Override
-		public double getDisplayDuration() {
-			return displayDuration;
-		}
-
-		@Override
-		public void setDisplayDuration(double newDisplayDuration) {
-			displayDuration=newDisplayDuration;
+		public String getObjectType() {
+			return "rectangle";
 		}
 	}
 
@@ -858,25 +884,22 @@ public class DrawHelper {
 		}
 	}
 
-	public static class GradientRectangleObject implements Layered {
+	public static class GradientRectangleObject extends Layered {
 		private int sx;
 		private int sy;
 		private int ex;
 		private int ey;
 		private int startColor;
 		private int endColor;
-		private double displayDuration;
-		private int layer;
 
 		public GradientRectangleObject(int sx, int sy, int ex, int ey, int startColor, int endColor, double displayDuration, int layer) {
+			super(displayDuration, layer);
 			this.sx=sx;
 			this.sy=sy;
 			this.ex=ex;
 			this.ey=ey;
 			this.startColor=startColor;
 			this.endColor=endColor;
-			this.displayDuration=displayDuration;
-			this.layer=layer;
 		}
 
 		public int getStartX() {
@@ -928,36 +951,18 @@ public class DrawHelper {
 		}
 
 		@Override
-		public int getLayer() {
-			return layer;
+		public boolean containsPoint(double x, double y) {
+			return sx<=x && x<=ex && sy<=y && y<=ey;
 		}
 
 		@Override
-		public void setLayer(int newLayer) {
-			layer=newLayer;
+		public Jsonable toJsonable() {
+			return new JsonableGradientRectangleObject(this);
 		}
 
 		@Override
-		public Matrix3x2f getMatrix() {
-			return new Matrix3x2f();
-		}
-
-		@Override
-		public void setMatrix(Matrix3x2f newMatrix) {}
-
-		@Override
-		public Map<String, Double> getMatrixInfo() {
-			return Map.of();
-		}
-
-		@Override
-		public double getDisplayDuration() {
-			return displayDuration;
-		}
-
-		@Override
-		public void setDisplayDuration(double newDisplayDuration) {
-			displayDuration=newDisplayDuration;
+		public String getObjectType() {
+			return "gradient_rectangle";
 		}
 	}
 
@@ -1018,23 +1023,20 @@ public class DrawHelper {
 		}
 	}
 
-	public static class StrokedRectangleObject implements Layered {
+	public static class StrokedRectangleObject extends Layered {
 		private int x;
 		private int y;
 		private int width;
 		private int height;
 		private int color;
-		private double displayDuration;
-		private int layer;
 
 		public StrokedRectangleObject(int x, int y, int width, int height, int color, double displayDuration, int layer) {
+			super(displayDuration, layer);
 			this.x=x;
 			this.y=y;
 			this.width=width;
 			this.height=height;
 			this.color=color;
-			this.displayDuration=displayDuration;
-			this.layer=layer;
 		}
 
 		public int getX() {
@@ -1078,36 +1080,18 @@ public class DrawHelper {
 		}
 
 		@Override
-		public int getLayer() {
-			return layer;
+		public boolean containsPoint(double x, double y) {
+			return this.x<=x && x<=this.x+this.width && this.y<=y && y<=this.y+this.height;
 		}
 
 		@Override
-		public void setLayer(int newLayer) {
-			layer=newLayer;
+		public Jsonable toJsonable() {
+			return new JsonableStrokedRectangleObject(this);
 		}
 
 		@Override
-		public Matrix3x2f getMatrix() {
-			return new Matrix3x2f();
-		}
-
-		@Override
-		public void setMatrix(Matrix3x2f newMatrix) {}
-
-		@Override
-		public Map<String, Double> getMatrixInfo() {
-			return Map.of();
-		}
-
-		@Override
-		public double getDisplayDuration() {
-			return displayDuration;
-		}
-
-		@Override
-		public void setDisplayDuration(double newDisplayDuration) {
-			displayDuration=newDisplayDuration;
+		public String getObjectType() {
+			return "stroked_rectangle";
 		}
 	}
 
@@ -1209,7 +1193,7 @@ public class DrawHelper {
 		}
 	}
 
-	public static class TextWithBackgroundObject implements Layered {
+	public static class TextWithBackgroundObject extends Layered {
 		private String text;
 		private int x;
 		private int y;
@@ -1218,11 +1202,8 @@ public class DrawHelper {
 		private int color;
 		private int bgColor;
 		private boolean shadow;
-		private double displayDuration;
-		private final Map<String, Double> matrix_info=new HashMap<>();
-		private Matrix3x2f matrix;
-		private int layer;
 		public TextWithBackgroundObject(String text, int x, int y, int marginX, int marginY, int color, int bgColor, boolean shadow, double displayDuration, int layer) {
+			super(displayDuration,layer);
 			this.text=text;
 			this.x=x;
 			this.y=y;
@@ -1231,13 +1212,10 @@ public class DrawHelper {
 			this.color=color;
 			this.bgColor=bgColor;
 			this.shadow=shadow;
-			this.displayDuration=displayDuration;
-			this.matrix_info.put("scale_x",1d);this.matrix_info.put("scale_y",1d);this.matrix_info.put("rotation",0d);this.matrix_info.put("diff_x",0d);this.matrix_info.put("diff_y",0d);
-			this.matrix=new Matrix3x2f();
-			this.layer=layer;
 		}
 
 		public TextWithBackgroundObject(String text, int x, int y, int marginX, int marginY, int color, int bgColor, boolean shadow, double displayDuration, int layer, double scale_x, double scale_y, double rotation, double diff_x, double diff_y) {
+			super(displayDuration, layer, scale_x, scale_y, rotation, diff_x, diff_y);
 			this.text=text;
 			this.x=x;
 			this.y=y;
@@ -1246,10 +1224,7 @@ public class DrawHelper {
 			this.color=color;
 			this.bgColor=bgColor;
 			this.shadow=shadow;
-			this.displayDuration=displayDuration;
-			this.layer=layer;
-			this.matrix_info.put("scale_x",scale_x);this.matrix_info.put("scale_y",scale_y);this.matrix_info.put("rotation",rotation);this.matrix_info.put("diff_x",diff_x);this.matrix_info.put("diff_y",diff_y);
-			this.matrix=DrawHelper.createMatrix(x,y,MinecraftClient.getInstance().textRenderer.getWidth(text),MinecraftClient.getInstance().textRenderer.fontHeight,scale_x,scale_y,rotation,diff_x,diff_y);
+			this.setMatrix(this.createMatrix(scale_x, scale_y, rotation, diff_x, diff_y));
 		}
 
 		public String getText() {
@@ -1316,38 +1291,30 @@ public class DrawHelper {
 			shadow=newShadow;
 		}
 
-		public Matrix3x2f getMatrix() {
-			return matrix;
+		@Override
+		public boolean containsPoint(double x, double y) {
+			Matrix3x2f inverse=new Matrix3x2f();
+			this.getMatrix().invert(inverse);
+			Vector2f point=new Vector2f((float)x,(float)y);
+			Vector2f topLeft=new Vector2f((float)this.x-this.marginX,(float)this.y-this.marginY);
+			Vector2f bottomRight=new Vector2f((float)this.x+MinecraftClient.getInstance().textRenderer.getWidth(this.text)-1+this.marginX,(float)this.y+MinecraftClient.getInstance().textRenderer.fontHeight-2+this.marginY);
+			inverse.transformPosition(point);
+			return topLeft.x<=point.x && point.x<=bottomRight.x && topLeft.y<=point.y && point.y<=bottomRight.y;
 		}
 
 		@Override
-		public double getDisplayDuration() {
-			return displayDuration;
+		public Jsonable toJsonable() {
+			return new JsonableTextWithBackgroundObject(this);
 		}
 
 		@Override
-		public void setDisplayDuration(double newDisplayDuration) {
-			displayDuration=newDisplayDuration;
+		public String getObjectType() {
+			return "text_with_bg";
 		}
 
 		@Override
-		public void setMatrix(Matrix3x2f newMatrix) {
-			matrix=newMatrix;
-		}
-
-		@Override
-		public Map<String,Double> getMatrixInfo() {
-			return matrix_info;
-		}
-
-		@Override
-		public int getLayer() {
-			return layer;
-		}
-
-		@Override
-		public void setLayer(int newLayer) {
-			layer=newLayer;
+		Matrix3x2f createMatrix(double scale_x, double scale_y, double rotation, double diff_x, double diff_y) {
+			return DrawHelper.createMatrix(this.x,this.y,MinecraftClient.getInstance().textRenderer.getWidth(this.text),MinecraftClient.getInstance().textRenderer.fontHeight,scale_x,scale_y,rotation,diff_x,diff_y);
 		}
 	}
 
@@ -1419,32 +1386,23 @@ public class DrawHelper {
 		}
 	}
 
-	public static class ItemObject implements Layered {
+	public static class ItemObject extends Layered {
 		private ItemStack item;
 		private int x;
 		private int y;
-		private double displayDuration;
-		private final Map<String, Double> matrix_info=new HashMap<>();
-		private Matrix3x2f matrix;
-		private int layer;
 		public ItemObject(ItemStack item, int x, int y, double displayDuration, int layer) {
+			super(displayDuration, layer);
 			this.item=item;
 			this.x=x;
 			this.y=y;
-			this.displayDuration=displayDuration;
-			this.matrix_info.put("scale_x",1d);this.matrix_info.put("scale_y",1d);this.matrix_info.put("rotation",0d);this.matrix_info.put("diff_x",0d);this.matrix_info.put("diff_y",0d);
-			this.matrix=new Matrix3x2f();
-			this.layer=layer;
 		}
 
 		public ItemObject(ItemStack item, int x, int y, double displayDuration, int layer, double scale_x, double scale_y, double rotation, double diff_x, double diff_y) {
+			super(displayDuration, layer, scale_x, scale_y, rotation, diff_x, diff_y);
 			this.item=item;
 			this.x=x;
 			this.y=y;
-			this.displayDuration=displayDuration;
-			this.matrix_info.put("scale_x",scale_x);this.matrix_info.put("scale_y",scale_y);this.matrix_info.put("rotation",rotation);this.matrix_info.put("diff_x",diff_x);this.matrix_info.put("diff_y",diff_y);
-			this.matrix=DrawHelper.createMatrix(x,y,16,16,scale_x,scale_y,rotation,diff_x,diff_y);
-			this.layer=layer;
+			this.setMatrix(this.createMatrix(scale_x, scale_y, rotation, diff_x, diff_y));
 		}
 
 		public ItemStack getItem() {
@@ -1472,38 +1430,29 @@ public class DrawHelper {
 		}
 
 		@Override
-		public int getLayer() {
-			return layer;
+		public boolean containsPoint(double x, double y) {
+			Matrix3x2f inverse=new Matrix3x2f();
+			this.getMatrix().invert(inverse);
+			Vector2f point=new Vector2f((float)x,(float)y);
+			Vector2f topLeft=new Vector2f((float)this.x,(float)this.y);
+			Vector2f bottomRight=new Vector2f((float)this.x+16,(float)this.y+16);
+			inverse.transformPosition(point);
+			return topLeft.x<=point.x && point.x<=bottomRight.x && topLeft.y<=point.y && point.y<=bottomRight.y;
 		}
 
 		@Override
-		public void setLayer(int newLayer) {
-			layer=newLayer;
+		public Jsonable toJsonable() {
+			return new JsonableItemObject(this);
 		}
 
 		@Override
-		public Matrix3x2f getMatrix() {
-			return matrix;
+		public String getObjectType() {
+			return "item";
 		}
 
 		@Override
-		public void setMatrix(Matrix3x2f newMatrix) {
-			matrix=newMatrix;
-		}
-
-		@Override
-		public Map<String, Double> getMatrixInfo() {
-			return matrix_info;
-		}
-
-		@Override
-		public double getDisplayDuration() {
-			return displayDuration;
-		}
-
-		@Override
-		public void setDisplayDuration(double newDisplayDuration) {
-			displayDuration=newDisplayDuration;
+		Matrix3x2f createMatrix(double scale_x, double scale_y, double rotation, double diff_x, double diff_y) {
+			return DrawHelper.createMatrix(x,y,16,16,scale_x,scale_y,rotation,diff_x,diff_y);
 		}
 	}
 
@@ -1592,40 +1541,32 @@ public class DrawHelper {
 		}
 	}
 
-	public static class TextureObject implements Layered {
+	public static class TextureObject extends Layered {
 		private Identifier texture;
 		private int x;
 		private int y;
 		private int width;
 		private int height;
 		private float alpha;
-		private double displayDuration;
-		private final Map<String, Double> matrix_info=new HashMap<>();
-		private Matrix3x2f matrix;
-		private int layer;
 		public TextureObject(Identifier texture, int x, int y, int width, int height, float alpha, double displayDuration, int layer) {
+			super(displayDuration, layer);
 			this.texture=texture;
 			this.x=x;
 			this.y=y;
 			this.width=width;
 			this.height=height;
 			this.alpha=alpha;
-			this.displayDuration=displayDuration;
-			this.matrix_info.put("scale_x",1d);this.matrix_info.put("scale_y",1d);this.matrix_info.put("rotation",0d);this.matrix_info.put("diff_x",0d);this.matrix_info.put("diff_y",0d);
-			this.matrix=new Matrix3x2f();
-			this.layer=layer;
 		}
+
 		public TextureObject(Identifier texture, int x, int y, int width, int height, float alpha, double displayDuration, int layer, double scale_x, double scale_y, double rotation, double diff_x, double diff_y) {
+			super(displayDuration, layer, scale_x, scale_y, rotation, diff_x, diff_y);
 			this.texture=texture;
 			this.x=x;
 			this.y=y;
 			this.width=width;
 			this.height=height;
 			this.alpha=alpha;
-			this.displayDuration=displayDuration;
-			this.matrix_info.put("scale_x",scale_x);this.matrix_info.put("scale_y",scale_y);this.matrix_info.put("rotation",rotation);this.matrix_info.put("diff_x",diff_x);this.matrix_info.put("diff_y",diff_y);
-			this.matrix=DrawHelper.createMatrix(x,y,width,height,scale_x,scale_y,rotation,diff_x,diff_y);
-			this.layer=layer;
+			this.setMatrix(this.createMatrix(scale_x, scale_y, rotation, diff_x, diff_y));
 		}
 
 		public Identifier getTexture() {
@@ -1677,38 +1618,29 @@ public class DrawHelper {
 		}
 
 		@Override
-		public int getLayer() {
-			return layer;
+		public boolean containsPoint(double x, double y) {
+			Matrix3x2f inverse=new Matrix3x2f();
+			this.getMatrix().invert(inverse);
+			Vector2f point=new Vector2f((float)x,(float)y);
+			Vector2f topLeft=new Vector2f((float)this.x,(float)this.y);
+			Vector2f bottomRight=new Vector2f((float)this.x+this.width,(float)this.y+this.height);
+			inverse.transformPosition(point);
+			return topLeft.x<=point.x && point.x<=bottomRight.x && topLeft.y<=point.y && point.y<=bottomRight.y;
 		}
 
 		@Override
-		public void setLayer(int newLayer) {
-			layer=newLayer;
+		public Jsonable toJsonable() {
+			return new JsonableTextureObject(this);
 		}
 
 		@Override
-		public Matrix3x2f getMatrix() {
-			return matrix;
+		public String getObjectType() {
+			return "texture";
 		}
 
 		@Override
-		public void setMatrix(Matrix3x2f newMatrix) {
-			matrix=newMatrix;
-		}
-
-		@Override
-		public Map<String, Double> getMatrixInfo() {
-			return matrix_info;
-		}
-
-		@Override
-		public double getDisplayDuration() {
-			return displayDuration;
-		}
-
-		@Override
-		public void setDisplayDuration(double newDisplayDuration) {
-			displayDuration=newDisplayDuration;
+		Matrix3x2f createMatrix(double scale_x, double scale_y, double rotation, double diff_x, double diff_y) {
+			return DrawHelper.createMatrix(x,y,width,height,scale_x,scale_y,rotation,diff_x,diff_y);
 		}
 	}
 
@@ -1771,28 +1703,20 @@ public class DrawHelper {
 		}
 	}
 
-	public static class ShapeObject implements Layered {
+	public static class ShapeObject extends Layered {
 		private List<Vertex> vertices;
 		private ScreenRect bounds;
-		private double displayDuration;
-		private final Map<String, Double> matrix_info=new HashMap<>();
-		private Matrix3x2f matrix;
-		private int layer;
 		public ShapeObject(List<Vertex> vertices, double displayDuration, int layer) {
+			super(displayDuration, layer);
 			this.vertices=vertices;
 			this.bounds=this.createBounds();
-			this.displayDuration=displayDuration;
-			this.matrix_info.put("scale_x",1d);this.matrix_info.put("scale_y",1d);this.matrix_info.put("rotation",0d);this.matrix_info.put("diff_x",0d);this.matrix_info.put("diff_y",0d);
-			this.matrix=new Matrix3x2f();
-			this.layer=layer;
 		}
+
 		public ShapeObject(List<Vertex> vertices, double displayDuration, int layer, double scale_x, double scale_y, double rotation, double diff_x, double diff_y) {
+			super(displayDuration, layer, scale_x, scale_y, rotation, diff_x, diff_y);
 			this.vertices=vertices;
 			this.bounds=this.createBounds();
-			this.displayDuration=displayDuration;
-			this.matrix_info.put("scale_x",scale_x);this.matrix_info.put("scale_y",scale_y);this.matrix_info.put("rotation",rotation);this.matrix_info.put("diff_x",diff_x);this.matrix_info.put("diff_y",diff_y);
-			this.matrix=DrawHelper.createMatrix(bounds.getLeft(),bounds.getTop(),bounds.width(),bounds.height(),scale_x,scale_y,rotation,diff_x,diff_y);
-			this.layer=layer;
+			this.setMatrix(this.createMatrix(scale_x, scale_y, rotation, diff_x, diff_y));
 		}
 
 		private ScreenRect createBounds() {
@@ -1822,39 +1746,65 @@ public class DrawHelper {
 			bounds=this.createBounds();
 		}
 
-		@Override
-		public int getLayer() {
-			return layer;
+		// https://stackoverflow.com/questions/2049582/how-to-determine-if-a-point-is-in-a-2d-triangle
+		private boolean triangleContainsPoint(Vertex a, Vertex b, Vertex c, Vector2f point) {
+			if (sign(a,b,c)==0) {
+				return false;
+			}
+
+			Vertex pointVertex=new Vertex((int) point.x, (int) point.y,0);
+			float d1=sign(pointVertex,a,b);
+			float d2=sign(pointVertex,b,c);
+			float d3=sign(pointVertex,c,a);
+
+			boolean hasNeg=d1<0||d2<0||d3<0;
+			boolean hasPos=d1>0||d2>0||d3>0;
+
+			return !(hasNeg&&hasPos);
+		}
+
+		private float sign(Vertex a, Vertex b, Vertex c) {
+			return (a.x()-c.x())*(b.y()-c.y())-(b.x()-c.x())*(a.y()-c.y());
 		}
 
 		@Override
-		public void setLayer(int newLayer) {
-			layer=newLayer;
+		public boolean containsPoint(double x, double y) {
+			if (vertices.size()<4) {
+				return false;
+			}
+
+			Matrix3x2f inverse=new Matrix3x2f();
+			this.getMatrix().invert(inverse);
+			Vector2f point=new Vector2f((float)x,(float)y);
+			inverse.transformPosition(point);
+
+			for (int i=0; i<vertices.size(); i+=4) {
+				Vertex a=vertices.get(i);
+				Vertex b=vertices.get(i+1);
+				Vertex c=vertices.get(i+2);
+				Vertex d=vertices.get(i+3);
+
+				if (triangleContainsPoint(a,b,c,point)||triangleContainsPoint(a,c,d,point)) {
+					return true;
+				}
+			}
+
+			return false;
 		}
 
 		@Override
-		public Matrix3x2f getMatrix() {
-			return matrix;
+		public Jsonable toJsonable() {
+			return new JsonableShapeObject(this);
 		}
 
 		@Override
-		public void setMatrix(Matrix3x2f newMatrix) {
-			matrix=newMatrix;
+		public String getObjectType() {
+			return "shape";
 		}
 
 		@Override
-		public Map<String, Double> getMatrixInfo() {
-			return matrix_info;
-		}
-
-		@Override
-		public double getDisplayDuration() {
-			return displayDuration;
-		}
-
-		@Override
-		public void setDisplayDuration(double newDisplayDuration) {
-			displayDuration=newDisplayDuration;
+		Matrix3x2f createMatrix(double scale_x, double scale_y, double rotation, double diff_x, double diff_y) {
+			return DrawHelper.createMatrix(bounds.getLeft(),bounds.getTop(),bounds.width(),bounds.height(),scale_x,scale_y,rotation,diff_x,diff_y);
 		}
 	}
 }
