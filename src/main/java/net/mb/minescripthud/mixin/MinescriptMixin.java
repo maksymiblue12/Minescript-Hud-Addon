@@ -1,31 +1,30 @@
 package net.mb.minescripthud.mixin;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonPrimitive;
 import net.mb.minescripthud.DrawHelper;
 import net.mb.minescripthud.MinescriptHUDAddon;
 import net.mb.minescripthud.ScriptFrameWaiter;
+import net.mb.minescripthud.util.MouseListener;
+import net.mb.minescripthud.util.MouseTracker;
 import net.minecraft.client.MinecraftClient;
 import net.minescript.common.*;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.LinkOption;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Mixin(Minescript.class)
 public class MinescriptMixin {
-    @Inject(method = "runScriptFunction",at=@At("HEAD"),cancellable = true)
+	@Inject(method = "runScriptFunction",at=@At("HEAD"),cancellable = true)
 	@SuppressWarnings("unchecked")
-    private static void runScriptFunction(JobControl job, long funcCallId, ScriptFunctionCall functionCall, CallbackInfoReturnable<ScriptValue> cir) {
-        String name = functionCall.name();
-        ScriptFunctionCall.ArgList args = functionCall.args();
+	private static void runScriptFunction(JobControl job, long funcCallId, ScriptFunctionCall functionCall, CallbackInfoReturnable<ScriptValue> cir) {
+		String name = functionCall.name();
+		ScriptFunctionCall.ArgList args = functionCall.args();
 		switch (name) {
 			case "add_text" -> {
 				args.expectSize(7);
@@ -39,11 +38,6 @@ public class MinescriptMixin {
 				cir.setReturnValue(ScriptValue.of(id));
 				cir.cancel();
 			}
-			case "get_text_object" -> {
-				args.expectSize(1);
-				cir.setReturnValue(ScriptValue.of(DrawHelper.getInstance().getTextObject(args.getStrictInt(0))));
-				cir.cancel();
-			}
 
 
 
@@ -54,20 +48,10 @@ public class MinescriptMixin {
 				cir.setReturnValue(ScriptValue.of(id));
 				cir.cancel();
 			}
-			case "get_rectangle_object" -> {
-				args.expectSize(1);
-				cir.setReturnValue(ScriptValue.of(DrawHelper.getInstance().getRectangleObject(args.getStrictInt(0))));
-				cir.cancel();
-			}
 			case "add_gradient_rectangle" -> {
 				args.expectSize(8);
 				int id=DrawHelper.getInstance().addGradientRectangle(args.getStrictInt(0),args.getStrictInt(1),args.getStrictInt(2),args.getStrictInt(3),args.getStrictInt(4),args.getStrictInt(5),args.getDouble(6),args.getStrictInt(7));
 				cir.setReturnValue(ScriptValue.of(id));
-				cir.cancel();
-			}
-			case "get_gradient_rectangle_object" -> {
-				args.expectSize(1);
-				cir.setReturnValue(ScriptValue.of(DrawHelper.getInstance().getGradientRectangleObject(args.getStrictInt(0))));
 				cir.cancel();
 			}
 
@@ -87,11 +71,6 @@ public class MinescriptMixin {
 				cir.setReturnValue(ScriptValue.of(id));
 				cir.cancel();
 			}
-			case "get_text_with_background_object" -> {
-				args.expectSize(1);
-				cir.setReturnValue(ScriptValue.of(DrawHelper.getInstance().getTextWithBackgroundObject(args.getStrictInt(0))));
-				cir.cancel();
-			}
 
 
 
@@ -107,11 +86,6 @@ public class MinescriptMixin {
 				args.expectSize(10);
 				int id=DrawHelper.getInstance().addAdvancedItem(args.getString(0), args.getStrictInt(1), args.getStrictInt(2), args.getDouble(3), args.getStrictInt(4), args.getDouble(5), args.getDouble(6), args.getDouble(7), args.getDouble(8), args.getDouble(9));
 				cir.setReturnValue(ScriptValue.of(id));
-				cir.cancel();
-			}
-			case "get_item_object" -> {
-				args.expectSize(1);
-				cir.setReturnValue(ScriptValue.of(DrawHelper.getInstance().getItemObject(args.getStrictInt(0))));
 				cir.cancel();
 			}
 
@@ -131,11 +105,6 @@ public class MinescriptMixin {
 				cir.setReturnValue(ScriptValue.of(id));
 				cir.cancel();
 			}
-			case "get_texture_object" -> {
-				args.expectSize(1);
-				cir.setReturnValue(ScriptValue.of(DrawHelper.getInstance().getTextureObject(args.getStrictInt(0))));
-				cir.cancel();
-			}
 
 
 
@@ -153,39 +122,56 @@ public class MinescriptMixin {
 				cir.setReturnValue(ScriptValue.of(id));
 				cir.cancel();
 			}
-			case "get_shape_object" -> {
-				args.expectSize(1);
-				cir.setReturnValue(ScriptValue.of(DrawHelper.getInstance().getShapeObject(args.getStrictInt(0))));
+
+
+
+
+
+			case "get_screen_width" -> {
+				cir.setReturnValue(ScriptValue.of(DrawHelper.getInstance().windowWidth));
 				cir.cancel();
 			}
-
-
-
-
-
+			case "get_screen_height" -> {
+				cir.setReturnValue(ScriptValue.of(DrawHelper.getInstance().windowHeight));
+				cir.cancel();
+			}
+			case "get_still_existing" -> {
+				cir.setReturnValue(ScriptValue.of(DrawHelper.getInstance().getStillExisting().toArray()));
+				cir.cancel();
+			}
+			case "get_elements" -> {
+				args.expectSize(1);
+				cir.setReturnValue(ScriptValue.of(DrawHelper.getInstance().getElements((List<Double>)args.get(0))));
+				cir.cancel();
+			}
+			case "get_element" -> {
+				args.expectSize(1);
+				cir.setReturnValue(ScriptValue.of(DrawHelper.getInstance().getElement(args.getStrictInt(0))));
+				cir.cancel();
+			}
 			case "still_exists" -> {
 				args.expectSize(1);
 				cir.setReturnValue(ScriptValue.of(DrawHelper.getInstance().stillExists(args.getStrictInt(0))));
 				cir.cancel();
 			}
 			case "get_mouse" -> {
-				cir.setReturnValue(ScriptValue.of(DrawHelper.getInstance().getMouse()));
+				cir.setReturnValue(ScriptValue.of(MouseTracker.getInstance().toJsonable()));
 				cir.cancel();
 			}
 			case "get_font_height" -> {
 				cir.setReturnValue(ScriptValue.of(MinecraftClient.getInstance().textRenderer.fontHeight));
 				cir.cancel();
 			}
-            case "wait_next_frame" -> {
+			case "wait_next_frame" -> {
 				job.suspend();
 				ScriptFrameWaiter.getInstance().waitNextFrame(funcCallId, job::resume);
-                cir.setReturnValue(ScriptValue.TRUE);
-                cir.cancel();
-            }
+				cir.setReturnValue(ScriptValue.TRUE);
+				cir.cancel();
+			}
 		}
-    }
+	}
 
-	@Inject(method = "runScriptFunction",at=@At("HEAD"),cancellable = true)
+	@Inject(method = "runNoReturnScriptFunction",at=@At("HEAD"),cancellable = true)
 	@SuppressWarnings("unchecked")
 	private static void runNoReturnScriptFunction(ScriptFunctionCall functionCall, CallbackInfoReturnable<Boolean> cir) {
 		String functionName = functionCall.name();
@@ -235,7 +221,7 @@ public class MinescriptMixin {
 			}
 			case "batch_update" -> {
 				args.expectSize(1);
-				DrawHelper.getInstance().batch_update((List<Map<String, Object>>)args.get(0));
+				DrawHelper.getInstance().batchUpdate((List<Map<String, Object>>)args.get(0));
 				cir.setReturnValue(true);
 				cir.cancel();
 			}
@@ -253,6 +239,29 @@ public class MinescriptMixin {
 			case "suppress_done_message" -> {
 				MinescriptHUDAddon.silent=true;
 				cir.setReturnValue(true);
+				cir.cancel();
+			}
+		}
+	}
+
+	@Inject(method = "runExternalScriptFunction",at=@At("HEAD"),cancellable = true)
+	private static void runExternalScriptFunction(Job.SubprocessJob job, long funcCallId, ScriptFunctionCall functionCall, CallbackInfoReturnable<Optional<JsonElement>> cir) {
+		String functionName = functionCall.name();
+		ScriptFunctionCall.ArgList args = functionCall.args();
+		switch (functionName) {
+			case "register_mouse_listener" -> {
+				int elementId=args.getStrictInt(0);
+				DrawHelper.getInstance().addMouseListener(elementId,new MouseListener(job));
+				cir.setReturnValue(Optional.of(new JsonPrimitive(funcCallId)));
+				cir.cancel();
+			}
+			case "start_mouse_listener" -> {
+				int elementId=args.getStrictInt(0);
+				long listenerId=args.getStrictLong(1);
+				MouseListener h=DrawHelper.getInstance().getMouseListener(elementId);
+				job.addOperation(listenerId,h);
+				h.start(funcCallId,listenerId);
+				cir.setReturnValue(Optional.empty());
 				cir.cancel();
 			}
 		}

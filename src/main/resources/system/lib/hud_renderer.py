@@ -1,5 +1,6 @@
+import time
 from colorsys import rgb_to_hsv,hsv_to_rgb
-from minescript_runtime import ScriptFunction,NoReturnScriptFunction
+from minescript_runtime import ScriptFunction,NoReturnScriptFunction,await_script_function,send_script_function_request
 from collections.abc import Callable
 from math import radians,sin,cos,ceil,hypot
 
@@ -63,6 +64,7 @@ class Matrix:
 		self._scale=[self._scale[0]*x,self._scale[1]*y]
 		return self
 
+	# noinspection PyShadowingNames
 	def rotate(self,radians):
 		"""
 		Applies rotation to the matrix.
@@ -138,66 +140,96 @@ class Line:
 		self.end=end
 
 	def to_list(self)->list:
-		return [self.start.to_dict(),self.end.to_dict()]\
+		return [self.start.to_dict(),self.end.to_dict()]
 
 def update_batch(data):
 	return (data,)
 update_batch=NoReturnScriptFunction("batch_update",update_batch)
 
+# noinspection PyTypeChecker
+def get_still_existing()->list[int]:
+	return ()
+get_still_existing=ScriptFunction("get_still_existing",get_still_existing)
+
+def get_elements(_ids:list[int])->dict:
+	return (_ids,)
+get_elements=ScriptFunction("get_elements",get_elements)
+
+def get_element(_id:int)->dict:
+	return (_id,)
+get_element=ScriptFunction("get_element",get_element)
+
 class BatchAnimator:
 	def __init__(self):
 		self.animations=[]
+		self.end_func=None
 
 	def animate_text(self,_id,func):
-		self.animations.append({"id":_id,"func":func,"type":"text","object_type":TextObject,"object":None})
+		self.animations.append({"id":_id,"func":func,"type":"text","update_func":update_text,"object_type":TextObject,"object":None})
 		return self
 
 	def animate_rectangle(self,_id,func):
-		self.animations.append({"id":_id,"func":func,"type":"rectangle","object_type":RectangleObject,"object":None})
+		self.animations.append({"id":_id,"func":func,"type":"rectangle","update_func":update_rectangle,"object_type":RectangleObject,"object":None})
 		return self
 
 	def animate_gradient_rectangle(self,_id,func):
-		self.animations.append({"id":_id,"func":func,"type":"gradient_rectangle","object_type":GradientRectangleObject,"object":None})
+		self.animations.append({"id":_id,"func":func,"type":"gradient_rectangle","update_func":update_gradient_rectangle,"object_type":GradientRectangleObject,"object":None})
+		return self
+
+	def animate_stroked_rectangle(self,_id,func):
+		self.animations.append({"id":_id,"func":func,"type":"stroked_rectangle","update_func":update_stroked_rectangle,"object_type":StrokedRectangleObject,"object":None})
 		return self
 
 	def animate_text_with_background(self,_id,func):
-		self.animations.append({"id":_id,"func":func,"type":"text_with_background","object_type":TextWithBackgroundObject,"object":None})
+		self.animations.append({"id":_id,"func":func,"type":"text_with_background","update_func":update_text_with_background,"object_type":TextWithBackgroundObject,"object":None})
 		return self
 
 	def animate_item(self,_id,func):
-		self.animations.append({"id":_id,"func":func,"type":"item","object_type":ItemObject,"object":None})
+		self.animations.append({"id":_id,"func":func,"type":"item","update_func":update_item,"object_type":ItemObject,"object":None})
 		return self
 
 	def animate_texture(self,_id,func):
-		self.animations.append({"id":_id,"func":func,"type":"texture","object_type":TextureObject,"object":None})
+		self.animations.append({"id":_id,"func":func,"type":"texture","update_func":update_texture,"object_type":TextureObject,"object":None})
 		return self
 
 	def animate_shape(self,_id,func):
-		self.animations.append({"id":_id,"func":func,"type":"shape","object_type":ShapeObject,"object":None})
+		self.animations.append({"id":_id,"func":func,"type":"shape","update_func":update_shape,"object_type":ShapeObject,"object":None})
+		return self
+
+	def run_function_at_frame_end(self,func):
+		self.end_func=func
 		return self
 
 	def start(self):
 		while (len(self.animations)>0):
 			data=[]
+			existing=get_still_existing()
+			_ids=[j["id"] for j in self.animations]
+			existing=[i for i in existing if i in _ids]
+			updates:dict=get_elements(existing)
+			if (not updates["successful"]):
+				continue
+			updates=updates["elements"]
 			for anim in self.animations:
-				_id,func,obj=anim["id"],anim["func"],anim["object"]
-				if (not still_exists(_id)):
+				_id,func,update_func,obj=anim["id"],anim["func"],anim["update_func"],anim["object"]
+				if (_id not in existing):
 					continue
 				if (obj is None):
 					obj=anim["object_type"](_id)
 					anim["object"]=obj
-				if (not obj.update(_id)):
+				if (not obj.update(_id,updates[str(_id)])):
 					continue
 				func(obj)
-				l=obj.to_list()
-				if (any(x is None for x in l)): continue
-				for i in range(len(l)):
-					if (hasattr(l[i],"to_list")):
-						l[i:i+1]=l[i].to_list()
+				l=obj.to_batch_list()
+				if (any(x is None for x in l)):
+					continue
 				data.append({"id":_id,"type":anim["type"],"data":l})
 			update_batch(data)
-			self.animations=[a for a in self.animations if still_exists(a["id"])]
+			self.animations=[a for a in self.animations if a["id"] in existing]
+			if (self.end_func is not None):
+				self.end_func()
 			wait_next_frame()
+
 
 
 
@@ -208,7 +240,7 @@ class TextObject(BaseObject):
 	This class represents a text element. To create a TextObject object, call the constructor with the id of the text element.
 	"""
 	# noinspection PyMissingConstructor
-	def __init__(self,_id:int):
+	def __init__(self,_id:int,dt=-1):
 		#: Text of the text element.
 		self.text:str=""
 
@@ -241,7 +273,11 @@ class TextObject(BaseObject):
 
 		#: Transformation matrix applied to the element (scale, rotation, translation).
 		self.matrix:Matrix=Matrix()
-		self.update(_id)
+		self.update(_id,dt)
+
+	@classmethod
+	def from_dict(cls,dt):
+		return cls(-1,dt)
 
 	@property
 	def width(self):
@@ -256,13 +292,16 @@ class TextObject(BaseObject):
 		return self._display_duration
 
 	# noinspection PyAttributeOutsideInit
-	def update(self,_id:int):
+	def update(self,_id:int,dt=-1):
 		"""
 		Updates this TextObject with the values of the text element specified by _id.
 
 		:param _id: ID of the text element.
 		"""
-		info=get_text_object(_id)
+		if (dt!=-1):
+			info=dt
+		else:
+			info=get_element(_id)
 		if (info is None or any(map(lambda x:x is None,info.values()))):
 			return False
 		self.text:str=info["text"]
@@ -277,6 +316,9 @@ class TextObject(BaseObject):
 		self._width=info["width"]
 		self._height=info["height"]
 		return True
+
+	def to_batch_list(self)->list:
+		return [self.text,self.x,self.y,self.color,self.shadow,self.display_duration_modifier,self.layer,*self.matrix.to_list()]
 
 	def to_list(self)->list:
 		"""
@@ -308,7 +350,7 @@ add_text=ScriptFunction("add_text",add_text)
 def add_advanced_text(text:str,x:int,y:int,color:int,shadow:bool,display_duration:float,layer:int,matrix:Matrix)->int:
 	"""
 	Add a text element to the screen, with additional scaling, rotation, and translation options.
-	
+
 	Advanced version of :func:`add_text` that allows custom transformations.
 
 	:param text: Text to display.
@@ -324,11 +366,6 @@ def add_advanced_text(text:str,x:int,y:int,color:int,shadow:bool,display_duratio
 	"""
 	return (text,x,y,color,shadow,display_duration,layer,*matrix.to_list())
 add_advanced_text=ScriptFunction("add_advanced_text",add_advanced_text)
-
-# noinspection PyTypeChecker
-def get_text_object(_id:int)->dict:
-	return (_id,)
-get_text_object=ScriptFunction("get_text_object",get_text_object)
 
 def update_text(_id:int,text:str,x:int,y:int,color:int,shadow:bool,display_duration:float,layer:int,matrix:Matrix):
 	return (_id,text,x,y,color,shadow,display_duration,layer,*matrix.to_list())
@@ -378,7 +415,7 @@ class RectangleObject(BaseObject):
 	This class represents a text element. To create a TextObject object, call the constructor with the id of the text element.
 	"""
 	# noinspection PyMissingConstructor
-	def __init__(self,_id:int):
+	def __init__(self,_id:int,dt=-1):
 		#: X-coordinate of the upper-left corner.
 		self.start_x:int=0
 		#: Y-coordinate of the upper-left corner.
@@ -395,20 +432,27 @@ class RectangleObject(BaseObject):
 		self.display_duration_modifier:float=0
 		#: Layer of the element.
 		self.layer:int=1
-		self.update(_id)
+		self.update(_id,dt)
+
+	@classmethod
+	def from_dict(cls,dt):
+		return cls(-1,dt)
 
 	@property
 	def display_duration(self):
 		return self._display_duration
 
 	# noinspection PyAttributeOutsideInit
-	def update(self,_id:int):
+	def update(self,_id:int,dt=-1):
 		"""
 		Updates this RectangleObject with the values of the rectangle element specified by _id.
 
 		:param _id: ID of the rectangle element.
 		"""
-		info=get_rectangle_object(_id)
+		if (dt!=-1):
+			info=dt
+		else:
+			info=get_element(_id)
 		if (info is None or any(map(lambda x:x is None,info.values()))):
 			return False
 		self.start_x:int=info["sx"]
@@ -420,6 +464,9 @@ class RectangleObject(BaseObject):
 		self.display_duration_modifier:float=0
 		self.layer:int=info["layer"]
 		return True
+
+	def to_batch_list(self)->list:
+		return [self.start_x,self.start_y,self.end_x,self.end_y,self.color,self.display_duration_modifier,self.layer]
 
 	def to_list(self)->list:
 		"""
@@ -463,11 +510,6 @@ def add_rectangle_from_corners(sx:int,sy:int,ex:int,ey:int,color:int,display_dur
 	return (sx,sy,ex,ey,color,display_duration,layer)
 add_rectangle_from_corners=ScriptFunction("add_rectangle_from_corners",add_rectangle_from_corners)
 
-# noinspection PyTypeChecker
-def get_rectangle_object(_id:int)->dict:
-	return (_id,)
-get_rectangle_object=ScriptFunction("get_rectangle_object",get_rectangle_object)
-
 def update_rectangle(_id:int,sx:int,sy:int,ex:int,ey:int,color:int,display_duration:float,layer:int):
 	return (_id,sx,sy,ex,ey,color,display_duration,layer)
 update_rectangle=NoReturnScriptFunction("update_rectangle",update_rectangle)
@@ -506,7 +548,7 @@ def modify_rectangle(_id:int,func:Callable[[RectangleObject],None])->None:
 
 class GradientRectangleObject(BaseObject):
 	# noinspection PyMissingConstructor
-	def __init__(self,_id:int):
+	def __init__(self,_id:int,dt=-1):
 		#: X-coordinate of the upper-left corner.
 		self.start_x:int=0
 		#: Y-coordinate of the upper-left corner.
@@ -525,20 +567,27 @@ class GradientRectangleObject(BaseObject):
 		self.display_duration_modifier:float=0
 		#: Layer of the element.
 		self.layer:int=1
-		self.update(_id)
+		self.update(_id,dt)
+
+	@classmethod
+	def from_dict(cls,dt):
+		return cls(-1,dt)
 
 	@property
 	def display_duration(self):
 		return self._display_duration
 
 	# noinspection PyAttributeOutsideInit
-	def update(self,_id:int):
+	def update(self,_id:int,dt=-1):
 		"""
 		Updates this GradientRectangleObject with the values of the gradient rectangle element specified by _id.
 
 		:param _id: ID of the gradient rectangle element.
 		"""
-		info=get_rectangle_object(_id)
+		if (dt!=-1):
+			info=dt
+		else:
+			info=get_element(_id)
 		if (info is None or any(map(lambda x:x is None,info.values()))):
 			return False
 		self.start_x:int=info["sx"]
@@ -551,6 +600,9 @@ class GradientRectangleObject(BaseObject):
 		self.display_duration_modifier:float=0
 		self.layer:int=info["layer"]
 		return True
+
+	def to_batch_list(self)->list:
+		return [self.start_x,self.start_y,self.end_x,self.end_y,self.start_color,self.end_color,self.display_duration_modifier,self.layer]
 
 	def to_list(self)->list:
 		"""
@@ -577,11 +629,6 @@ def add_gradient_rectangle(sx:int,sy:int,w:int,h:int,start_color:int,end_color:i
 	"""
 	return (sx,sy,sx+w,sy+h,start_color,end_color,display_duration,layer)
 add_gradient_rectangle=ScriptFunction("add_gradient_rectangle",add_gradient_rectangle)
-
-# noinspection PyTypeChecker
-def get_gradient_rectangle_object(_id:int)->dict:
-	return (_id,)
-get_gradient_rectangle_object=ScriptFunction("get_gradient_rectangle_object",get_gradient_rectangle_object)
 
 def update_gradient_rectangle(_id:int,sx:int,sy:int,ex:int,ey:int,start_color:int,end_color:int,display_duration:float,layer:int):
 	return (_id,sx,sy,ex,ey,start_color,end_color,display_duration,layer)
@@ -628,7 +675,7 @@ class TextWithBackgroundObject(BaseObject):
 	This class represents a text with background element. To create a TextWithBackgroundObject object, call the constructor with the id of the text with background element.
 	"""
 	# noinspection PyMissingConstructor
-	def __init__(self,_id:int):
+	def __init__(self,_id:int,dt=-1):
 		#: Text of the text element.
 		self.text:str=""
 
@@ -670,7 +717,11 @@ class TextWithBackgroundObject(BaseObject):
 
 		#: Transformation matrix applied to the element (scale, rotation, translation).
 		self.matrix:Matrix=Matrix()
-		self.update(_id)
+		self.update(_id,dt)
+
+	@classmethod
+	def from_dict(cls,dt):
+		return cls(-1,dt)
 
 	@property
 	def width(self):
@@ -685,13 +736,16 @@ class TextWithBackgroundObject(BaseObject):
 		return self._display_duration
 
 	# noinspection PyAttributeOutsideInit
-	def update(self,_id:int):
+	def update(self,_id:int,dt=-1):
 		"""
 		Updates this TextObject with the values of the text element specified by _id.
 
 		:param _id: ID of the text element.
 		"""
-		info=get_text_with_background_object(_id)
+		if (dt!=-1):
+			info=dt
+		else:
+			info=get_element(_id)
 		if (info is None or any(map(lambda x:x is None,info.values()))):
 			return False
 		self.text:str=info["text"]
@@ -709,6 +763,9 @@ class TextWithBackgroundObject(BaseObject):
 		self._width=info["width"]
 		self._height=info["height"]
 		return True
+
+	def to_batch_list(self)->list:
+		return [self.text,self.x,self.y,self.margin_x,self.margin_y,self.color,self.bg_color,self.shadow,self.display_duration_modifier,self.layer,*self.matrix.to_list()]
 
 	def to_list(self)->list:
 		"""
@@ -762,11 +819,6 @@ def add_advanced_text_with_background(text:str,x:int,y:int,margin_x:int,margin_y
 	return (text,x,y,margin_x,margin_y,color,bg_color,shadow,display_duration,layer,*matrix.to_list())
 add_advanced_text_with_background=ScriptFunction("add_advanced_text_with_background",add_advanced_text_with_background)
 
-# noinspection PyTypeChecker
-def get_text_with_background_object(_id:int)->dict:
-	return (_id,)
-get_text_with_background_object=ScriptFunction("get_text_with_background_object",get_text_with_background_object)
-
 def update_text_with_background(_id:int,text:str,x:int,y:int,margin_x:int,margin_y:int,color:int,bg_color:int,shadow:bool,display_duration:float,layer:int,matrix:Matrix):
 	return (_id,text,x,y,margin_x,margin_y,color,bg_color,shadow,display_duration,layer,*matrix.to_list())
 update_text_with_background=NoReturnScriptFunction("update_text_with_background",update_text_with_background)
@@ -809,7 +861,7 @@ def modify_text_with_background(_id:int,func:Callable[[TextWithBackgroundObject]
 
 class ItemObject(BaseObject):
 	# noinspection PyMissingConstructor
-	def __init__(self,_id:int):
+	def __init__(self,_id:int,dt=-1):
 		#: Item to display. Uses the `/give <https://minecraft.wiki/w/Commands/give>`_ command `format <https://minecraft.wiki/w/Argument_types#item_stack>`_.
 		self.item:str=""
 		#: X-coordinate of the item.
@@ -824,20 +876,27 @@ class ItemObject(BaseObject):
 		self.layer:int=1
 		#: Transformation matrix applied to the element (scale, rotation, translation).
 		self.matrix:Matrix=Matrix()
-		self.update(_id)
+		self.update(_id,dt)
+
+	@classmethod
+	def from_dict(cls,dt):
+		return cls(-1,dt)
 
 	@property
 	def display_duration(self):
 		return self._display_duration
 
 	# noinspection PyAttributeOutsideInit
-	def update(self,_id:int):
+	def update(self,_id:int,dt=-1):
 		"""
 		Updates this ItemObject with the values of the item element specified by _id.
 
 		:param _id: ID of the item element.
 		"""
-		info=get_item_object(_id)
+		if (dt!=-1):
+			info=dt
+		else:
+			info=get_element(_id)
 		if (info is None or any(map(lambda x:x is None,info.values()))):
 			return False
 		self.item:str=info["item"]
@@ -848,6 +907,9 @@ class ItemObject(BaseObject):
 		self.layer:int=info["layer"]
 		self.matrix=Matrix.from_dict(info)
 		return True
+
+	def to_batch_list(self)->list:
+		return [self.item,self.x,self.y,self.display_duration_modifier,self.layer,*self.matrix.to_list()]
 
 	def to_list(self)->list:
 		"""
@@ -891,11 +953,6 @@ def add_advanced_item(item:str,x:int,y:int,display_duration:float,layer:int,matr
 	return (item,x,y,display_duration,layer,*matrix.to_list())
 add_advanced_item=ScriptFunction("add_advanced_item",add_advanced_item)
 
-# noinspection PyTypeChecker
-def get_item_object(_id:int)->dict:
-	return (_id,)
-get_item_object=ScriptFunction("get_item_object",get_item_object)
-
 def update_item(_id:int,item:str,x:int,y:int,display_duration:float,layer:int,matrix:Matrix):
 	return (_id,item,x,y,display_duration,layer,*matrix.to_list())
 update_item=NoReturnScriptFunction("update_item",update_item)
@@ -938,7 +995,7 @@ def modify_item(_id:int,func:Callable[[ItemObject],None])->None:
 
 class TextureObject(BaseObject):
 	# noinspection PyMissingConstructor
-	def __init__(self,_id:int):
+	def __init__(self,_id:int,dt=-1):
 		#: Identifier of the texture. See :class:`Identifier` for more information.
 		self.texture:Identifier=Identifier("none",True)
 
@@ -968,20 +1025,27 @@ class TextureObject(BaseObject):
 
 		#: Transformation matrix applied to the element (scale, rotation, translation).
 		self.matrix:Matrix=Matrix()
-		self.update(_id)
+		self.update(_id,dt)
+
+	@classmethod
+	def from_dict(cls,dt):
+		return cls(-1,dt)
 
 	@property
 	def display_duration(self):
 		return self._display_duration
 
 	# noinspection PyAttributeOutsideInit
-	def update(self,_id:int):
+	def update(self,_id:int,dt=-1):
 		"""
 		Updates this TextureObject with the values of the texture element specified by _id.
 
 		:param _id: ID of the texture element.
 		"""
-		info=get_texture_object(_id)
+		if (dt!=-1):
+			info=dt
+		else:
+			info=get_element(_id)
 		if (info is None or any(map(lambda x:x is None,info.values()))):
 			return False
 		self.texture:Identifier=Identifier(info["texture"],info["vanilla"])
@@ -995,6 +1059,9 @@ class TextureObject(BaseObject):
 		self.layer:int=info["layer"]
 		self.matrix=Matrix.from_dict(info)
 		return True
+
+	def to_batch_list(self)->list:
+		return [*self.texture.to_list(),self.x,self.y,self.width,self.height,self.alpha,self.display_duration_modifier,self.layer,*self.matrix.to_list()]
 
 	def to_list(self)->list:
 		"""
@@ -1048,11 +1115,6 @@ def add_advanced_texture(texture:Identifier,x:int,y:int,width:int,height:int,alp
 	return (*texture.to_list(),x,y,width,height,alpha,display_duration,layer,*matrix.to_list())
 add_advanced_texture=ScriptFunction("add_advanced_texture",add_advanced_texture)
 
-# noinspection PyTypeChecker
-def get_texture_object(_id:int)->dict:
-	return (_id,)
-get_texture_object=ScriptFunction("get_texture_object",get_texture_object)
-
 def update_texture(_id:int,texture:Identifier,x:int,y:int,width:int,height:int,alpha:float,display_duration:float,layer:int,matrix:Matrix):
 	return (_id,*texture.to_list(),x,y,width,height,alpha,display_duration,layer,*matrix.to_list())
 update_texture=NoReturnScriptFunction("update_texture",update_texture)
@@ -1095,16 +1157,23 @@ def modify_texture(_id:int,func:Callable[[TextureObject],None])->None:
 
 class ShapeObject(BaseObject):
 	# noinspection PyMissingConstructor
-	def __init__(self,_id:int):
-		self.update(_id)
+	def __init__(self,_id:int,dt=-1):
+		self.update(_id,dt)
+
+	@classmethod
+	def from_dict(cls,dt):
+		return cls(-1,dt)
 
 	@property
 	def display_duration(self):
 		return self._display_duration
 
 	# noinspection PyAttributeOutsideInit
-	def update(self,_id:int):
-		info=get_shape_object(_id)
+	def update(self,_id:int,dt=-1):
+		if (dt!=-1):
+			info=dt
+		else:
+			info=get_element(_id)
 		if (info is None or any(map(lambda x:x is None,info.values()))):
 			return False
 		self.lines=[]
@@ -1118,6 +1187,11 @@ class ShapeObject(BaseObject):
 		self.layer:int=info["layer"]
 		self.matrix=Matrix.from_dict(info)
 		return True
+
+	def to_batch_list(self)->list:
+		out=[]
+		for l in self.lines: out.extend(l.to_list())
+		return [out,self.display_duration_modifier,self.layer,*self.matrix.to_list()]
 
 	def to_list(self)->list:
 		return [self.lines,self.display_duration_modifier,self.layer,self.matrix]
@@ -1133,11 +1207,6 @@ def add_advanced_shape(lines:list[Line],display_duration:float,layer:int,matrix:
 	for l in lines: out.extend(l.to_list())
 	return (out,display_duration,layer,*matrix.to_list())
 add_advanced_shape=ScriptFunction("add_advanced_shape",add_advanced_shape)
-
-# noinspection PyTypeChecker
-def get_shape_object(_id:int)->dict:
-	return (_id,)
-get_shape_object=ScriptFunction("get_shape_object",get_shape_object)
 
 def update_shape(_id:int,lines:list[Line],display_duration:float,layer:int,matrix:Matrix):
 	out=[]
@@ -1218,8 +1287,6 @@ def add_advanced_multiline(points:list[tuple[int,int,int]],width:int,display_dur
 	return add_shape(lines,display_duration,layer)
 
 def get_lines_for_quad(p1:tuple[int,int],p2:tuple[int,int],p3:tuple[int,int],p4:tuple[int,int],color:int)->list[Line]:
-	if (len({p1,p2,p3,p4})!=4):
-		raise ValueError("Points must be unique!")
 	points=[p1,p2,p3,p4]
 	points.sort(key=lambda p:p[1])
 	tl,tr=((points[0],points[1]) if points[0][0]<points[1][0] else (points[1],points[0]))
@@ -1326,11 +1393,21 @@ def add_advanced_ellipse(center_x:int,center_y:int,radius_x:int,radius_y:int,col
 
 class MouseObject:
 	def __init__(self,mouse:dict):
+		if (mouse is None):
+			self.x=None
+			self.y=None
+			self.is_left_pressed=False
+			self.is_middle_pressed=False
+			self.is_right_pressed=False
+			return
 		self.x=mouse["x"]
 		self.y=mouse["y"]
-		self.was_pressed_left=mouse["left"]
-		self.was_pressed_middle=mouse["middle"]
-		self.was_pressed_right=mouse["right"]
+		self.is_left_down=mouse["isLeftDown"]
+		self.is_middle_down=mouse["isMiddleDown"]
+		self.is_right_down=mouse["isRightDown"]
+		self.was_left_just_clicked=mouse["wasLeftJustClicked"]
+		self.was_middle_just_clicked=mouse["wasMiddleJustClicked"]
+		self.was_right_just_clicked=mouse["wasRightJustClicked"]
 
 def rainbow_animation(t:BaseObject,step:int=1):
 	"""
@@ -1398,6 +1475,49 @@ def argb_to_int(color:int)->tuple[int,int,int,int]:
 	b=color&0xFF
 	return (a,r,g,b)
 
+TYPE_TO_FUNCTIONS={
+	"text":{"object":TextObject,"update":update_text},
+	"rectangle":{"object":RectangleObject,"update":update_rectangle},
+	"gradient_rectangle":{"object":GradientRectangleObject,"update":update_gradient_rectangle},
+	"text_with_bg":{"object":TextWithBackgroundObject,"update":update_text_with_background},
+	"item":{"object":ItemObject,"update":update_item},
+	"texture":{"object":TextureObject,"update":update_texture},
+	"shape":{"object":ShapeObject,"update":update_shape},
+}
+
+def _run_mouse_result(_id,data,on_hover,on_click):
+	typ=data.get("object_type","")
+	if (typ not in TYPE_TO_FUNCTIONS):
+		raise ValueError(f"This should be impossible! Unknown type given: '{typ}'.")
+	obj=TYPE_TO_FUNCTIONS[typ]["object"].from_dict(data["object"])
+	m=MouseObject(data["mouse"])
+	event_type=data.get("event_type","")
+	if (event_type=="hover"):
+		if (on_hover is not None):
+			on_hover(obj,m,data["exited"])
+	elif (event_type=="click"):
+		if (on_click is not None):
+			on_click(obj,m)
+	else:
+		raise ValueError(f"This should be impossible! Unknown event type given: '{event_type}'.")
+	l=obj.to_list()
+	if (any(map(lambda x:(x is None),l))): return
+	TYPE_TO_FUNCTIONS[typ]["update"](_id,*l)
+
+def add_async_mouse_callbacks(_id:int,*,on_hover:Callable[[BaseObject,MouseObject,bool],None]=None,on_click:Callable[[BaseObject,MouseObject],None]=None):
+	if (on_hover is None and on_click is None):
+		raise ValueError("At least one callback must be provided!")
+	listener_id=await_script_function("register_mouse_listener",(_id,))
+	send_script_function_request("start_mouse_listener",(_id,listener_id),lambda data,i=_id,oh=on_hover,oc=on_click:_run_mouse_result(i,data,oh,oc))
+
+def add_mouse_callbacks_and_wait(_id:int,*,on_hover:Callable[[BaseObject,MouseObject,bool],None]=None,on_click:Callable[[BaseObject,MouseObject],None]=None):
+	add_async_mouse_callbacks(_id,on_hover=on_hover,on_click=on_click)
+	wait_until_removed(_id)
+
+def wait_until_removed(_id:int):
+	while (still_exists(_id)):
+		time.sleep(0.1)
+
 def remove_element(_id:int):
 	"""
 	Removes the element with the given id.
@@ -1418,12 +1538,18 @@ def still_exists(_id:int)->bool:
 	return (_id,)
 still_exists=ScriptFunction("still_exists",still_exists)
 
-def _get_mouse():
+# noinspection PyTypeChecker
+def get_mouse()->MouseObject:
 	return ()
-_get_mouse=ScriptFunction("get_mouse",_get_mouse)
+get_mouse=ScriptFunction("get_mouse",get_mouse,lambda m:MouseObject(m))
 
-def get_mouse():
-	return MouseObject(_get_mouse())
+def get_screen_width()->int:
+	return ()
+get_screen_width=ScriptFunction("get_screen_width",get_screen_width)
+
+def get_screen_height()->int:
+	return ()
+get_screen_height=ScriptFunction("get_screen_height",get_screen_height)
 
 # noinspection PyTypeChecker
 def get_font_height()->int:
