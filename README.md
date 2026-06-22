@@ -39,6 +39,26 @@ _id=add_text("I can MOVE!",x=10,y=10,color=Colors.WHITE,shadow=True,display_dura
 animate_text(_id,move)
 ```
 <br></br>
+## Mouse Events
+All objects can detect mouse hover and click events.
+```python
+from minescript import echo
+from hud_renderer import *
+
+def hover(text:TextObject,mouse:MouseObject,exited:bool):
+    if (exited):
+        text.color=Colors.WHITE
+    else:
+        text.color=Colors.GREEN
+
+def click(text:TextObject,mouse:MouseObject):
+    echo("Clicked!")
+
+_id=add_text("Click me!",x=10,y=10,color=Colors.WHITE,shadow=True,display_duration=10)
+
+add_mouse_callbacks_and_wait(_id,on_hover=hover,on_click=click)
+```
+<br></br>
 ## Layer System
 Elements are rendered in layers.
 Elements with higher layer values render above elements with lower layers.
@@ -66,7 +86,7 @@ Elements with higher layer values render above elements with lower layers.
  - `animate_item(...)`
 
 ### Textures
-> **Note:** Custom textures can be added by a resource pack in the `assets/minescripthud/textures/gui/sprites/` folder.
+> **Note:** Custom textures must be added by a resource pack in the `assets/minescripthud/textures/gui/sprites/` folder.
  - `add_texture(...)`
  - `add_advanced_texture(...)`
  - `animate_texture(...)`
@@ -85,7 +105,10 @@ Elements with higher layer values render above elements with lower layers.
 ### Utility functions
  - `argb(...)`
  - `argb_to_int(...)`
+ - `alpha_from_int(...)`
+ - `add_async_mouse_callbacks(...)`
+ - `add_mouse_callbacks_and_wait(...)`
+ - `wait_until_removed(...)`
  - `remove_element(...)`
  - `clear()`
  - `suppress_done_message()`
-
