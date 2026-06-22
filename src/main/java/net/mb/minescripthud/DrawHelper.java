@@ -49,7 +49,6 @@ public class DrawHelper {
 	public void clear() {
 		elements.clear();
 		elementUpdates.clear();
-		mouseListeners.forEach((id, mouseListener)-> mouseListener.cancel());
 		mouseListeners.clear();
 	}
 
@@ -313,12 +312,12 @@ public class DrawHelper {
 		Iterator<Map.Entry<Integer, Layered>> iter=elements.entrySet().iterator();
 		while (iter.hasNext()) {
 			Map.Entry<Integer, Layered> entry=iter.next();
+			Integer key=entry.getKey();
 			Layered t=entry.getValue();
 			t.setDisplayDuration(t.getDisplayDuration()-deltaSeconds);
 			if (t.getDisplayDuration()<=0) {
-				elementUpdates.remove(entry.getKey());
-				mouseListeners.get(entry.getKey()).cancel();
-				mouseListeners.remove(entry.getKey());
+				elementUpdates.remove(key);
+				mouseListeners.remove(key);
 				iter.remove();
 			}
 		}
