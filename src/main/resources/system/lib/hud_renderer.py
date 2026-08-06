@@ -1,8 +1,8 @@
 import time
-from colorsys import rgb_to_hsv,hsv_to_rgb
-from minescript_runtime import ScriptFunction,NoReturnScriptFunction,await_script_function,send_script_function_request
 from collections.abc import Callable
+from colorsys import rgb_to_hsv,hsv_to_rgb
 from math import radians,sin,cos,ceil,hypot
+from minescript_runtime import ScriptFunction,NoReturnScriptFunction,await_script_function,send_script_function_request
 
 
 class Colors:
@@ -162,7 +162,7 @@ get_element=ScriptFunction("get_element",get_element)
 class BatchAnimator:
 	def __init__(self):
 		self.animations=[]
-		self.end_func=None
+		self.end_func:Callable=None
 
 	def animate_text(self,_id,func):
 		self.animations.append({"id":_id,"func":func,"type":"text","update_func":update_text,"object_type":TextObject,"object":None})
@@ -229,6 +229,18 @@ class BatchAnimator:
 			if (self.end_func is not None):
 				self.end_func()
 			wait_next_frame()
+
+def add_element(name:str,*data):
+	return (name,*data)
+add_element=ScriptFunction("add_element",add_element)
+
+def add_advanced_element(name:str,*data):
+	return (name,*data)
+add_advanced_element=ScriptFunction("add_advanced_element",add_advanced_element)
+
+def update_element(name:str,_id:int,*data):
+	return (name,_id,*data)
+update_element=NoReturnScriptFunction("update_element",update_element)
 
 
 
@@ -343,8 +355,7 @@ def add_text(text:str,x:int,y:int,color:int,shadow:bool,display_duration:float,l
 	:param layer: Rendering layer of the element. Higher layers appear above lower ones. Default is 1.
 	:return: ID of the created element.
 	"""
-	return (text,x,y,color,shadow,display_duration,layer)
-add_text=ScriptFunction("add_text",add_text)
+	return add_element("text",text,x,y,color,shadow,display_duration,layer)
 
 # noinspection PyTypeChecker
 def add_advanced_text(text:str,x:int,y:int,color:int,shadow:bool,display_duration:float,layer:int,matrix:Matrix)->int:
@@ -364,12 +375,10 @@ def add_advanced_text(text:str,x:int,y:int,color:int,shadow:bool,display_duratio
 		See :class:`Matrix`.
 	:return: ID of the created element.
 	"""
-	return (text,x,y,color,shadow,display_duration,layer,*matrix.to_list())
-add_advanced_text=ScriptFunction("add_advanced_text",add_advanced_text)
+	return add_advanced_element("text",text,x,y,color,shadow,display_duration,layer,*matrix.to_list())
 
 def update_text(_id:int,text:str,x:int,y:int,color:int,shadow:bool,display_duration:float,layer:int,matrix:Matrix):
-	return (_id,text,x,y,color,shadow,display_duration,layer,*matrix.to_list())
-update_text=NoReturnScriptFunction("update_text",update_text)
+	return update_element("text",_id,text,x,y,color,shadow,display_duration,layer,*matrix.to_list())
 
 def _animate_text(_id:int,func:Callable[[TextObject], None])->None:
 	t=TextObject(_id)
@@ -490,8 +499,7 @@ def add_rectangle(sx:int,sy:int,w:int,h:int,color:int,display_duration:float,lay
 	:param layer: Rendering layer of the element. Higher layers appear above lower ones. Default is 1.
 	:return: ID of the created element.
 	"""
-	return (sx,sy,sx+w,sy+h,color,display_duration,layer)
-add_rectangle=ScriptFunction("add_rectangle",add_rectangle)
+	return add_element("rectangle",sx,sy,sx+w,sy+h,color,display_duration,layer)
 
 # noinspection PyTypeChecker
 def add_rectangle_from_corners(sx:int,sy:int,ex:int,ey:int,color:int,display_duration:float,layer:int=1)->int:
@@ -507,12 +515,10 @@ def add_rectangle_from_corners(sx:int,sy:int,ex:int,ey:int,color:int,display_dur
 	:param layer: Rendering layer of the element. Higher layers appear above lower ones. Default is 1.
 	:return: ID of the created element.
 	"""
-	return (sx,sy,ex,ey,color,display_duration,layer)
-add_rectangle_from_corners=ScriptFunction("add_rectangle_from_corners",add_rectangle_from_corners)
+	return add_element("rectangle",sx,sy,ex,ey,color,display_duration,layer)
 
 def update_rectangle(_id:int,sx:int,sy:int,ex:int,ey:int,color:int,display_duration:float,layer:int):
-	return (_id,sx,sy,ex,ey,color,display_duration,layer)
-update_rectangle=NoReturnScriptFunction("update_rectangle",update_rectangle)
+	return update_element("rectangle",_id,sx,sy,ex,ey,color,display_duration,layer)
 
 def _animate_rectangle(_id:int,func:Callable[[RectangleObject],None])->None:
 	b=RectangleObject(_id)
@@ -627,12 +633,10 @@ def add_gradient_rectangle(sx:int,sy:int,w:int,h:int,start_color:int,end_color:i
 	:param layer: Rendering layer of the element. Higher layers appear above lower ones. Default is 1.
 	:return: ID of the created element.
 	"""
-	return (sx,sy,sx+w,sy+h,start_color,end_color,display_duration,layer)
-add_gradient_rectangle=ScriptFunction("add_gradient_rectangle",add_gradient_rectangle)
+	return add_element("gradient_rectangle",sx,sy,sx+w,sy+h,start_color,end_color,display_duration,layer)
 
 def update_gradient_rectangle(_id:int,sx:int,sy:int,ex:int,ey:int,start_color:int,end_color:int,display_duration:float,layer:int):
-	return (_id,sx,sy,ex,ey,start_color,end_color,display_duration,layer)
-update_gradient_rectangle=NoReturnScriptFunction("update_gradient_rectangle",update_gradient_rectangle)
+	return update_element("gradient_rectangle",_id,sx,sy,ex,ey,start_color,end_color,display_duration,layer)
 
 def _animate_gradient_rectangle(_id:int,func:Callable[[GradientRectangleObject],None])->None:
 	b=GradientRectangleObject(_id)
@@ -743,12 +747,10 @@ def add_stroked_rectangle(x:int,y:int,w:int,h:int,color:int,display_duration:flo
 	:param layer: Rendering layer of the element. Higher layers appear above lower ones. Default is 1.
 	:return: ID of the created element.
 	"""
-	return (x,y,w,h,color,display_duration,layer)
-add_stroked_rectangle=ScriptFunction("add_stroked_rectangle",add_stroked_rectangle)
+	return add_element("stroked_rectangle",x,y,w,h,color,display_duration,layer)
 
 def update_stroked_rectangle(_id:int,x:int,y:int,w:int,h:int,color:int,display_duration:float,layer:int):
-	return (_id,x,y,w,h,color,display_duration,layer)
-update_stroked_rectangle=NoReturnScriptFunction("update_stroked_rectangle",update_stroked_rectangle)
+	return update_element("stroked_rectangle",_id,x,y,w,h,color,display_duration,layer)
 
 def _animate_stroked_rectangle(_id:int,func:Callable[[StrokedRectangleObject],None])->None:
 	b=StrokedRectangleObject(_id)
@@ -908,8 +910,7 @@ def add_text_with_background(text:str,x:int,y:int,margin_x:int,margin_y:int,colo
 	:param layer: Rendering layer of the element. Higher layers appear above lower ones. Default is 1.
 	:return: ID of the created element.
 	"""
-	return (text,x,y,margin_x,margin_y,color,bg_color,shadow,display_duration,layer)
-add_text_with_background=ScriptFunction("add_text_with_background",add_text_with_background)
+	return add_element("text_with_background",text,x,y,margin_x,margin_y,color,bg_color,shadow,display_duration,layer)
 
 # noinspection PyTypeChecker
 def add_advanced_text_with_background(text:str,x:int,y:int,margin_x:int,margin_y:int,color:int,bg_color:int,shadow:bool,display_duration:float,layer:int,matrix:Matrix)->int:
@@ -932,12 +933,10 @@ def add_advanced_text_with_background(text:str,x:int,y:int,margin_x:int,margin_y
 		See :class:`Matrix`.
 	:return: ID of the created element.
 	"""
-	return (text,x,y,margin_x,margin_y,color,bg_color,shadow,display_duration,layer,*matrix.to_list())
-add_advanced_text_with_background=ScriptFunction("add_advanced_text_with_background",add_advanced_text_with_background)
+	return add_advanced_element("text_with_background",text,x,y,margin_x,margin_y,color,bg_color,shadow,display_duration,layer,*matrix.to_list())
 
 def update_text_with_background(_id:int,text:str,x:int,y:int,margin_x:int,margin_y:int,color:int,bg_color:int,shadow:bool,display_duration:float,layer:int,matrix:Matrix):
-	return (_id,text,x,y,margin_x,margin_y,color,bg_color,shadow,display_duration,layer,*matrix.to_list())
-update_text_with_background=NoReturnScriptFunction("update_text_with_background",update_text_with_background)
+	return update_element("text_with_background",_id,text,x,y,margin_x,margin_y,color,bg_color,shadow,display_duration,layer,*matrix.to_list())
 
 def _animate_text_with_background(_id:int,func:Callable[[TextWithBackgroundObject],None])->None:
 	t=TextWithBackgroundObject(_id)
@@ -1047,8 +1046,7 @@ def add_item(item:str,x:int,y:int,display_duration:float,layer:int=1)->int:
 	:param layer: Rendering layer of the element. Higher layers appear above lower ones. Default is 1.
 	:return: ID of the created element.
 	"""
-	return (item,x,y,display_duration,layer)
-add_item=ScriptFunction("add_item",add_item)
+	return add_element("item",item,x,y,display_duration,layer)
 
 # noinspection PyTypeChecker
 def add_advanced_item(item:str,x:int,y:int,display_duration:float,layer:int,matrix:Matrix)->int:
@@ -1066,12 +1064,10 @@ def add_advanced_item(item:str,x:int,y:int,display_duration:float,layer:int,matr
 		See :class:`Matrix`.
 	:return: ID of the created element.
 	"""
-	return (item,x,y,display_duration,layer,*matrix.to_list())
-add_advanced_item=ScriptFunction("add_advanced_item",add_advanced_item)
+	return add_advanced_element("item",item,x,y,display_duration,layer,*matrix.to_list())
 
 def update_item(_id:int,item:str,x:int,y:int,display_duration:float,layer:int,matrix:Matrix):
-	return (_id,item,x,y,display_duration,layer,*matrix.to_list())
-update_item=NoReturnScriptFunction("update_item",update_item)
+	return update_element("item",_id,item,x,y,display_duration,layer,*matrix.to_list())
 
 def _animate_item(_id:int,func:Callable[[ItemObject],None])->None:
 	t=ItemObject(_id)
@@ -1204,8 +1200,7 @@ def add_texture(texture:Identifier,x:int,y:int,width:int,height:int,alpha:float,
 	:param layer: Rendering layer of the element. Higher layers appear above lower ones. Default is 1.
 	:return: ID of the created element.
 	"""
-	return (*texture.to_list(),x,y,width,height,alpha,display_duration,layer)
-add_texture=ScriptFunction("add_texture",add_texture)
+	return add_element("texture",*texture.to_list(),x,y,width,height,alpha,display_duration,layer)
 
 # noinspection PyTypeChecker
 def add_advanced_texture(texture:Identifier,x:int,y:int,width:int,height:int,alpha:float,display_duration:float,layer:int,matrix:Matrix)->int:
@@ -1228,12 +1223,10 @@ def add_advanced_texture(texture:Identifier,x:int,y:int,width:int,height:int,alp
 		See :class:`Matrix`.
 	:return: ID of the created element.
 	"""
-	return (*texture.to_list(),x,y,width,height,alpha,display_duration,layer,*matrix.to_list())
-add_advanced_texture=ScriptFunction("add_advanced_texture",add_advanced_texture)
+	return add_advanced_element("texture",*texture.to_list(),x,y,width,height,alpha,display_duration,layer,*matrix.to_list())
 
 def update_texture(_id:int,texture:Identifier,x:int,y:int,width:int,height:int,alpha:float,display_duration:float,layer:int,matrix:Matrix):
-	return (_id,*texture.to_list(),x,y,width,height,alpha,display_duration,layer,*matrix.to_list())
-update_texture=NoReturnScriptFunction("update_texture",update_texture)
+	return update_element("texture",_id,*texture.to_list(),x,y,width,height,alpha,display_duration,layer,*matrix.to_list())
 
 def _animate_texture(_id:int,func:Callable[[TextureObject],None])->None:
 	t=TextureObject(_id)
@@ -1315,20 +1308,17 @@ class ShapeObject(BaseObject):
 def add_shape(lines:list[Line],display_duration:float,layer:int=1)->int:
 	out=[]
 	for l in lines: out.extend(l.to_list())
-	return (out,display_duration,layer)
-add_shape=ScriptFunction("add_shape",add_shape)
+	return add_element("shape",out,display_duration,layer)
 
 def add_advanced_shape(lines:list[Line],display_duration:float,layer:int,matrix:Matrix)->int:
 	out=[]
 	for l in lines: out.extend(l.to_list())
-	return (out,display_duration,layer,*matrix.to_list())
-add_advanced_shape=ScriptFunction("add_advanced_shape",add_advanced_shape)
+	return add_advanced_element("shape",out,display_duration,layer,*matrix.to_list())
 
 def update_shape(_id:int,lines:list[Line],display_duration:float,layer:int,matrix:Matrix):
 	out=[]
 	for l in lines: out.extend(l.to_list())
-	return (_id,out,display_duration,layer,*matrix.to_list())
-update_shape=NoReturnScriptFunction("update_shape",update_shape)
+	return update_element("shape",_id,out,display_duration,layer,*matrix.to_list())
 
 def _animate_shape(_id:int,func:Callable[[ShapeObject],None])->None:
 	s=ShapeObject(_id)
@@ -1596,7 +1586,7 @@ TYPE_TO_FUNCTIONS={
 	"rectangle":{"object":RectangleObject,"update":update_rectangle},
 	"gradient_rectangle":{"object":GradientRectangleObject,"update":update_gradient_rectangle},
 	"stroked_rectangle":{"object":StrokedRectangleObject,"update":update_stroked_rectangle},
-	"text_with_bg":{"object":TextWithBackgroundObject,"update":update_text_with_background},
+	"text_with_background":{"object":TextWithBackgroundObject,"update":update_text_with_background},
 	"item":{"object":ItemObject,"update":update_item},
 	"texture":{"object":TextureObject,"update":update_texture},
 	"shape":{"object":ShapeObject,"update":update_shape},

@@ -26,113 +26,16 @@ public class MinescriptMixin {
         String name = functionCall.name();
         ScriptFunctionCall.ArgList args = functionCall.args();
 		switch (name) {
-			case "add_text" -> {
-				args.expectSize(7);
-				int id=DrawHelper.getInstance().addText(args.getString(0), args.getStrictInt(1), args.getStrictInt(2), args.getStrictInt(3), args.getBoolean(4), args.getDouble(5),args.getStrictInt(6));
+			case "add_element" -> {
+				int id=DrawHelper.getInstance().addElement(name,args);
 				cir.setReturnValue(ScriptValue.of(id));
 				cir.cancel();
 			}
-			case "add_advanced_text" -> {
-				args.expectSize(12);
-				int id=DrawHelper.getInstance().addAdvancedText(args.getString(0), args.getStrictInt(1), args.getStrictInt(2), args.getStrictInt(3), args.getBoolean(4), args.getDouble(5),args.getStrictInt(6),args.getDouble(7),args.getDouble(8),args.getDouble(9),args.getDouble(10),args.getDouble(11));
+			case "add_advanced_element" -> {
+				int id=DrawHelper.getInstance().addAdvancedElement(name,args);
 				cir.setReturnValue(ScriptValue.of(id));
 				cir.cancel();
 			}
-
-
-
-
-			case "add_rectangle" -> {
-				args.expectSize(7);
-				int id=DrawHelper.getInstance().addRectangle(args.getStrictInt(0),args.getStrictInt(1),args.getStrictInt(2),args.getStrictInt(3),args.getStrictInt(4),args.getDouble(5),args.getStrictInt(6));
-				cir.setReturnValue(ScriptValue.of(id));
-				cir.cancel();
-			}
-			case "add_gradient_rectangle" -> {
-				args.expectSize(8);
-				int id=DrawHelper.getInstance().addGradientRectangle(args.getStrictInt(0),args.getStrictInt(1),args.getStrictInt(2),args.getStrictInt(3),args.getStrictInt(4),args.getStrictInt(5),args.getDouble(6),args.getStrictInt(7));
-				cir.setReturnValue(ScriptValue.of(id));
-				cir.cancel();
-			}
-			case "add_stroked_rectangle" -> {
-				args.expectSize(7);
-				int id=DrawHelper.getInstance().addStrokedRectangle(args.getStrictInt(0),args.getStrictInt(1),args.getStrictInt(2),args.getStrictInt(3),args.getStrictInt(4),args.getDouble(5),args.getStrictInt(6));
-				cir.setReturnValue(ScriptValue.of(id));
-				cir.cancel();
-			}
-
-
-
-
-
-			case "add_text_with_background" -> {
-				args.expectSize(10);
-				int id=DrawHelper.getInstance().addTextWithBackground(args.getString(0), args.getStrictInt(1), args.getStrictInt(2), args.getStrictInt(3), args.getStrictInt(4), args.getStrictInt(5), args.getStrictInt(6), args.getBoolean(7), args.getDouble(8), args.getStrictInt(9));
-				cir.setReturnValue(ScriptValue.of(id));
-				cir.cancel();
-			}
-			case "add_advanced_text_with_background" -> {
-				args.expectSize(15);
-				int id=DrawHelper.getInstance().addAdvancedTextWithBackground(args.getString(0), args.getStrictInt(1), args.getStrictInt(2), args.getStrictInt(3), args.getStrictInt(4), args.getStrictInt(5), args.getStrictInt(6), args.getBoolean(7), args.getDouble(8), args.getStrictInt(9), args.getDouble(10), args.getDouble(11), args.getDouble(12), args.getDouble(13), args.getDouble(14));
-				cir.setReturnValue(ScriptValue.of(id));
-				cir.cancel();
-			}
-
-
-
-
-
-			case "add_item" -> {
-				args.expectSize(5);
-				int id=DrawHelper.getInstance().addItem(args.getString(0), args.getStrictInt(1), args.getStrictInt(2), args.getDouble(3), args.getStrictInt(4));
-				cir.setReturnValue(ScriptValue.of(id));
-				cir.cancel();
-			}
-			case "add_advanced_item" -> {
-				args.expectSize(10);
-				int id=DrawHelper.getInstance().addAdvancedItem(args.getString(0), args.getStrictInt(1), args.getStrictInt(2), args.getDouble(3), args.getStrictInt(4), args.getDouble(5), args.getDouble(6), args.getDouble(7), args.getDouble(8), args.getDouble(9));
-				cir.setReturnValue(ScriptValue.of(id));
-				cir.cancel();
-			}
-
-
-
-
-
-			case "add_texture" -> {
-				args.expectSize(9);
-				int id=DrawHelper.getInstance().addTexture(args.getString(0), args.getBoolean(1), args.getStrictInt(2), args.getStrictInt(3), args.getStrictInt(4), args.getStrictInt(5), args.getDouble(6), args.getDouble(7), args.getStrictInt(8));
-				cir.setReturnValue(ScriptValue.of(id));
-				cir.cancel();
-			}
-			case "add_advanced_texture" -> {
-				args.expectSize(14);
-				int id=DrawHelper.getInstance().addAdvancedTexture(args.getString(0), args.getBoolean(1), args.getStrictInt(2), args.getStrictInt(3), args.getStrictInt(4), args.getStrictInt(5), args.getDouble(6), args.getDouble(7), args.getStrictInt(8), args.getDouble(9), args.getDouble(10), args.getDouble(11), args.getDouble(12), args.getDouble(13));
-				cir.setReturnValue(ScriptValue.of(id));
-				cir.cancel();
-			}
-
-
-
-
-
-			case "add_shape" -> {
-				args.expectSize(3);
-				int id=DrawHelper.getInstance().addShape((List<Map<String, Double>>)args.get(0), args.getDouble(1), args.getStrictInt(2));
-				cir.setReturnValue(ScriptValue.of(id));
-				cir.cancel();
-			}
-			case "add_advanced_shape" -> {
-				args.expectSize(13);
-				int id=DrawHelper.getInstance().addAdvancedShape((List<Map<String, Double>>)args.get(0), args.getDouble(1), args.getStrictInt(2), args.getDouble(3), args.getDouble(4), args.getDouble(5), args.getDouble(6), args.getDouble(7));
-				cir.setReturnValue(ScriptValue.of(id));
-				cir.cancel();
-			}
-
-
-
-
-
 			case "get_screen_width" -> {
 				cir.setReturnValue(ScriptValue.of(DrawHelper.getInstance().windowWidth));
 				cir.cancel();
@@ -183,57 +86,14 @@ public class MinescriptMixin {
 		String functionName = functionCall.name();
 		ScriptFunctionCall.ArgList args = functionCall.args();
 		switch (functionName) {
-			case "update_text" -> {
-				args.expectSize(13);
-				DrawHelper.getInstance().updateText(args.getStrictInt(0), args.getString(1), args.getStrictInt(2), args.getStrictInt(3), args.getStrictInt(4), args.getBoolean(5), args.getDouble(6),args.getStrictInt(7),args.getDouble(8),args.getDouble(9),args.getDouble(10),args.getDouble(11),args.getDouble(12));
-				cir.setReturnValue(true);
-				cir.cancel();
-			}
-			case "update_rectangle" -> {
-				args.expectSize(8);
-				DrawHelper.getInstance().updateRectangle(args.getStrictInt(0),args.getStrictInt(1),args.getStrictInt(2),args.getStrictInt(3),args.getStrictInt(4),args.getStrictInt(5),args.getDouble(6),args.getStrictInt(7));
-				cir.setReturnValue(true);
-				cir.cancel();
-			}
-			case "update_gradient_rectangle" -> {
-				args.expectSize(9);
-				DrawHelper.getInstance().updateGradientRectangle(args.getStrictInt(0),args.getStrictInt(1),args.getStrictInt(2),args.getStrictInt(3),args.getStrictInt(4),args.getStrictInt(5),args.getStrictInt(6),args.getDouble(7),args.getStrictInt(8));
-				cir.setReturnValue(true);
-				cir.cancel();
-			}
-			case "update_stroked_rectangle" -> {
-				args.expectSize(8);
-				DrawHelper.getInstance().updateStrokedRectangle(args.getStrictInt(0),args.getStrictInt(1),args.getStrictInt(2),args.getStrictInt(3),args.getStrictInt(4),args.getStrictInt(5),args.getDouble(6),args.getStrictInt(7));
-				cir.setReturnValue(true);
-				cir.cancel();
-			}
-			case "update_text_with_background" -> {
-				args.expectSize(16);
-				DrawHelper.getInstance().updateTextWithBackground(args.getStrictInt(0), args.getString(1), args.getStrictInt(2), args.getStrictInt(3), args.getStrictInt(4), args.getStrictInt(5), args.getStrictInt(6), args.getStrictInt(7), args.getBoolean(8), args.getDouble(9), args.getStrictInt(10), args.getDouble(11), args.getDouble(12), args.getDouble(13), args.getDouble(14), args.getDouble(15));
-				cir.setReturnValue(true);
-				cir.cancel();
-			}
-			case "update_item" -> {
-				args.expectSize(11);
-				DrawHelper.getInstance().updateItem(args.getStrictInt(0), args.getString(1), args.getStrictInt(2), args.getStrictInt(3), args.getDouble(4), args.getStrictInt(5), args.getDouble(6), args.getDouble(7), args.getDouble(8), args.getDouble(9), args.getDouble(10));
-				cir.setReturnValue(true);
-				cir.cancel();
-			}
-			case "update_texture" -> {
-				args.expectSize(15);
-				DrawHelper.getInstance().updateTexture(args.getStrictInt(0), args.getString(1), args.getBoolean(2), args.getStrictInt(3), args.getStrictInt(4), args.getStrictInt(5), args.getStrictInt(6), args.getDouble(7), args.getDouble(8), args.getStrictInt(9), args.getDouble(10), args.getDouble(11), args.getDouble(12), args.getDouble(13), args.getDouble(14));
-				cir.setReturnValue(true);
-				cir.cancel();
-			}
-			case "update_shape" -> {
-				args.expectSize(9);
-				DrawHelper.getInstance().updateShape(args.getStrictInt(0), (List<Map<String, Double>>)args.get(1), args.getDouble(2), args.getStrictInt(3), args.getDouble(4), args.getDouble(5), args.getDouble(6), args.getDouble(7), args.getDouble(8));
+			case "update_element" -> {
+				DrawHelper.getInstance().updateElement(functionName,args);
 				cir.setReturnValue(true);
 				cir.cancel();
 			}
 			case "batch_update" -> {
 				args.expectSize(1);
-				DrawHelper.getInstance().batchUpdate((List<Map<String, Object>>)args.get(0));
+				DrawHelper.getInstance().batchUpdate(functionName,(List<Map<String, Object>>)args.get(0));
 				cir.setReturnValue(true);
 				cir.cancel();
 			}

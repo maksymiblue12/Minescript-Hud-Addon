@@ -3,6 +3,7 @@ package net.mb.minescripthud;
 import net.fabricmc.api.ClientModInitializer;
 
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+import net.mb.minescripthud.element.ElementRegistry;
 import net.minecraft.util.Identifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,6 +21,7 @@ public class MinescriptHUDAddon implements ClientModInitializer {
 
 	@Override
 	public void onInitializeClient(){
+		ElementRegistry.registerElements();
 		HudElementRegistry.addLast(Identifier.of(MOD_ID,"text_drawer"),DrawHelper.getInstance()::draw);
 		if (!getCurrentVersion().equals(getLastRunVersion())) {
 			LOGGER.info("Updating files!");
