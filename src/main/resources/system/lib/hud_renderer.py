@@ -142,6 +142,22 @@ class Line:
 	def to_list(self)->list:
 		return [self.start.to_dict(),self.end.to_dict()]
 
+class Point:
+	def __init__(self,x:int,y:int):
+		self.x=x
+		self.y=y
+
+	def __add__(self, other):
+		if (isinstance(other,Point)):
+			return Point(self.x+other.x,self.y+other.y)
+		elif (isinstance(other,(list,tuple))):
+			return Point(self.x+other[0],self.y+other[1])
+		else:
+			raise ValueError(f"Can not add type: {type(other)}")
+
+	def to_dict(self):
+		return {"x":self.x,"y":self.y}
+
 def update_batch(data):
 	return (data,)
 update_batch=NoReturnScriptFunction("batch_update",update_batch)
@@ -1264,6 +1280,7 @@ def modify_texture(_id:int,func:Callable[[TextureObject],None])->None:
 
 
 
+
 class ShapeObject(BaseObject):
 	# noinspection PyMissingConstructor
 	def __init__(self,_id:int,dt=-1):
@@ -1492,6 +1509,170 @@ def get_lines_for_advanced_ellipse(center_x:int,center_y:int,radius_x:int,radius
 
 def add_advanced_ellipse(center_x:int,center_y:int,radius_x:int,radius_y:int,color:int,center_color:int,vertex_modifier:Callable[[Vertex,int],None],display_duration:float,segments:int=1000,layer=1)->int:
 	return add_shape(get_lines_for_advanced_ellipse(center_x,center_y,radius_x,radius_y,color,center_color,vertex_modifier,segments),display_duration,layer)
+
+
+
+
+
+class AntiAliasedShapeObject(BaseObject):
+	# noinspection PyMissingConstructor
+	def __init__(self,_id:int,dt=-1):
+		self.update(_id,dt)
+
+	@classmethod
+	def from_dict(cls,dt):
+		return cls(-1,dt)
+
+	@property
+	def display_duration(self):
+		return self._display_duration
+
+	# noinspection PyAttributeOutsideInit
+	def update(self,_id:int,dt=-1):
+		if (dt!=-1):
+			info=dt
+		else:
+			info=get_element(_id)
+		if (info is None or any(map(lambda x:x is None,info.values()))):
+			return False
+		self.points=list(map(lambda v:Point(v["x"],v["y"]),info["vertices"]))
+		self.color=info["color"]
+		self.fade=info["fade"]
+		self._display_duration:float=info["displayDuration"]
+		self.display_duration_modifier:float=0
+		self.layer:int=info["layer"]
+		self.matrix=Matrix.from_dict(info)
+		return True
+
+	def to_batch_list(self)->list:
+		out=[]
+		for l in self.points: out.extend(l.to_list())
+		return [out,self.color,self.fade,self.display_duration_modifier,self.layer,*self.matrix.to_list()]
+
+	def to_list(self)->list:
+		return [self.points,self.color,self.fade,self.display_duration_modifier,self.layer,self.matrix]
+
+def add_anti_aliased_shape(points:list[Point],color:int,display_duration:float,layer:int=1,fade:float=1.5)->int:
+	out=[]
+	for l in points: out.append(l.to_dict())
+	return add_element("aa_shape",out,color,fade,display_duration,layer)
+
+def add_advanced_anti_aliased_shape(points:list[Point],color:int,display_duration:float,layer:int,matrix:Matrix,fade:float=1.5)->int:
+	out=[]
+	for l in points: out.append(l.to_dict())
+	return add_advanced_element("aa_shape",out,color,fade,display_duration,layer,*matrix.to_list())
+
+def update_anti_aliased_shape(_id:int,points:list[Point],color:int,fade:float,display_duration:float,layer:int,matrix:Matrix):
+	out=[]
+	for l in points: out.append(l.to_dict())
+	update_element("aa_shape",_id,out,color,fade,display_duration,layer,*matrix.to_list())
+
+def _animate_anti_aliased_shape(_id:int,func:Callable[[AntiAliasedShapeObject],None])->None:
+	s=AntiAliasedShapeObject(_id)
+	while (still_exists(_id)):
+		if (s.update(_id)):
+			func(s)
+			l=s.to_list()
+			if (any(map(lambda x:(x is None),l))): return
+			update_anti_aliased_shape(_id,*l)
+			wait_next_frame()
+
+def animate_anti_aliased_shape(_id:int,func:Callable[[AntiAliasedShapeObject],None])->None:
+	_animate_anti_aliased_shape(_id,func)
+
+def modify_anti_aliased_shape(_id:int,func:Callable[[AntiAliasedShapeObject],None])->None:
+	s=AntiAliasedShapeObject(_id)
+	if (still_exists(_id)):
+		if (s.update(_id)):
+			func(s)
+			update_anti_aliased_shape(_id,*s.to_list())
+
+
+def add_line_with_thickness(start:Point,end:Point,width:int,color:int,display_duration:float,layer:int=1,fade:float=1.5)->int:
+	start_x,start_y=start;end_x,end_y=end
+	dx=end_x-start_x
+	dy=end_y-start_y
+	length=hypot(dx,dy)
+	wx=dy/length*ceil(width/2)
+	wy=-dx/length*ceil(width/2)
+	v1=Point(start_x+wx,start_y+wy)
+	v2=Point(start_x-wx,start_y-wy)
+	v3=Point(end_x-wx,end_y-wy)
+	v4=Point(end_x+wx,end_y+wy)
+	return add_anti_aliased_shape([v1,v2,v3,v4],color,display_duration,layer,fade)
+
+def add_anti_aliased_quad(p1:Point,p2:Point,p3:Point,p4:Point,color:int,display_duration:float,layer:int=1,fade:float=1.5)->int:
+	return add_anti_aliased_shape([p1,p2,p3,p4],color,display_duration,layer,fade)
+
+def add_anti_aliased_rectangle(pos:Point,width:int,height:int,color:int,display_duration:float,layer:int=1,fade:float=1.5)->int:
+	return add_anti_aliased_shape([pos,pos+(width,0),pos+(width,height),pos+(0,height)],color,display_duration,layer,fade)
+
+def add_anti_aliased_rectangle_with_round_corners(pos:Point,width:int,height:int,corner_radius:int,color:int,display_duration:float,layer:int=1,fade:float=1.5,segments:int=5)->int:
+	ps=[]
+	if (corner_radius>min(width,height)/2):
+		raise ValueError("Corner radius must be smaller than half of the shorter side!")
+
+	# Upper-right corner, angles: 0-90
+	center=Point(pos.x+width-corner_radius,pos.y+corner_radius)
+	for i in range(segments+1):
+		angle=radians((i/segments)*90)
+
+		vx=round(center.x+cos(angle)*corner_radius)
+		vy=round(center.y-sin(angle)*corner_radius)
+		ps.append(Point(vx,vy))
+
+	# Upper-left corner, angles: 90-180
+	center=Point(pos.x+corner_radius,pos.y+corner_radius)
+	for i in range(segments+1):
+		angle=radians((i/segments)*90+90)
+
+		vx=round(center.x+cos(angle)*corner_radius)
+		vy=round(center.y-sin(angle)*corner_radius)
+		ps.append(Point(vx,vy))
+
+	# Bottom-left corner, angles: 180-270
+	center=Point(pos.x+corner_radius,pos.y+height-corner_radius)
+	for i in range(segments+1):
+		angle=radians((i/segments)*90+180)
+
+		vx=round(center.x+cos(angle)*corner_radius)
+		vy=round(center.y-sin(angle)*corner_radius)
+		ps.append(Point(vx,vy))
+
+	# Bottom-right corner, angles: 270-360
+	center=Point(pos.x+width-corner_radius,pos.y+height-corner_radius)
+	for i in range(segments+1):
+		angle=radians((i/segments)*90+270)
+
+		vx=round(center.x+cos(angle)*corner_radius)
+		vy=round(center.y-sin(angle)*corner_radius)
+		ps.append(Point(vx,vy))
+
+	return add_anti_aliased_shape(ps,color,display_duration,layer,fade)
+
+def get_points_for_circle(center:Point,radius:int,segments:int=30)->list[Point]:
+	ps=[]
+	for i in range(segments):
+		a=radians(i/segments*360)
+		x=center.x+cos(a)*radius
+		y=center.y+sin(a)*radius
+		ps.append(Point(x,y))
+	return ps
+
+def add_anti_aliased_circle(center:Point,radius:int,color:int,display_duration:float,layer:int=1,fade:float=1.5,segments:int=30)->int:
+	return add_anti_aliased_shape(get_points_for_circle(center,radius,segments),color,display_duration,layer,fade)
+
+def get_points_for_ellipse(center:Point,radius_x:int,radius_y:int,segments:int=30)->list[Point]:
+	ps=[]
+	for i in range(segments):
+		a=radians(i/segments*360)
+		x=center.x+cos(a)*radius_x
+		y=center.y+sin(a)*radius_y
+		ps.append(Point(x,y))
+	return ps
+
+def add_anti_aliased_ellipse(center:Point,radius_x:int,radius_y:int,color:int,display_duration:float,layer:int=1,fade:float=1.5,segments:int=30)->int:
+	return add_anti_aliased_shape(get_points_for_ellipse(center,radius_x,radius_y,segments),color,display_duration,layer,fade)
 
 
 

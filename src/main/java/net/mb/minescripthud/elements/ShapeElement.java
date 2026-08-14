@@ -34,14 +34,15 @@ public class ShapeElement extends Element {
 	@Override
 	@SuppressWarnings("unchecked")
 	public Layered create(ScriptFunctionCall.ArgList args) {
-		return new ShapeObject(formatVertices((List<Map<String, Double>>)args.get(0)), args.getDouble(1), args.getStrictInt(2), args.getDouble(3), args.getDouble(4), args.getDouble(5), args.getDouble(6), args.getDouble(7));
+		args.expectSize(3);
+		return new ShapeObject(formatVertices((List<Map<String, Double>>)args.get(0)), args.getDouble(1), args.getStrictInt(2));
 	}
 
 	@Override
 	@SuppressWarnings("unchecked")
 	public Layered createAdvanced(ScriptFunctionCall.ArgList args) {
-		args.expectSize(3);
-		return new ShapeObject(formatVertices((List<Map<String, Double>>)args.get(0)), args.getDouble(1), args.getStrictInt(2));
+		args.expectSize(8);
+		return new ShapeObject(formatVertices((List<Map<String, Double>>)args.get(0)), args.getDouble(1), args.getStrictInt(2), args.getDouble(3), args.getDouble(4), args.getDouble(5), args.getDouble(6), args.getDouble(7));
 	}
 
 	@Override

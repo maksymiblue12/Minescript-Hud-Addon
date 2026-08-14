@@ -27,5 +27,7 @@ public class ElementRegistry {
 		register(new ItemElement());
 		register(new TextureElement());
 		register(new ShapeElement());
+
+		register(new AntiAliasedShapeElement());
 	}
 }

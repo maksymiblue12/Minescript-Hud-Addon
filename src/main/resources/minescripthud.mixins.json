@@ -4,7 +4,10 @@
 	"compatibilityLevel": "JAVA_21",
 	"mixins": [
 		"MinescriptMixin",
-		"SubprocessJobMixin"
+		"SubprocessJobMixin",
+		"GuiRendererDrawMixin",
+		"GuiRendererPreparationMixin",
+		"GuiRendererMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
