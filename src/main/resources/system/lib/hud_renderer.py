@@ -212,6 +212,10 @@ class BatchAnimator:
 		self.animations.append({"id":_id,"func":func,"type":"shape","update_func":update_shape,"object_type":ShapeObject,"object":None})
 		return self
 
+	def animate_anti_aliased_shape(self,_id,func):
+		self.animations.append({"id":_id,"func":func,"type":"aa_shape","update_func":update_anti_aliased_shape,"object_type":AntiAliasedShapeObject,"object":None})
+		return self
+
 	def run_function_at_frame_end(self,func):
 		self.end_func=func
 		return self
@@ -1771,6 +1775,7 @@ TYPE_TO_FUNCTIONS={
 	"item":{"object":ItemObject,"update":update_item},
 	"texture":{"object":TextureObject,"update":update_texture},
 	"shape":{"object":ShapeObject,"update":update_shape},
+	"aa_shape":{"object":AntiAliasedShapeObject,"update":update_anti_aliased_shape},
 }
 
 def _run_mouse_result(_id,data,on_hover,on_click):
