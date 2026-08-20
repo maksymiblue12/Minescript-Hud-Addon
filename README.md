@@ -10,6 +10,7 @@ This mod adds the ability to draw custom HUD elements in [Minescript](https://mo
  - Draw ***rectangles*** and gradient rectangles
  - Render ***items***
  - Render ***textures***
+ - Render ***custom shapes***
  - ***Animate*** all element properties
  - Control ***display duration*** and ***render layers***
 <br></br>
@@ -36,6 +37,26 @@ def move(text:TextObject):
 _id=add_text("I can MOVE!",x=10,y=10,color=Colors.WHITE,shadow=True,display_duration=5)
 
 animate_text(_id,move)
+```
+<br></br>
+## Mouse Events
+All objects can detect mouse hover and click events.
+```python
+from minescript import echo
+from hud_renderer import *
+
+def hover(text:TextObject,mouse:MouseObject,exited:bool):
+    if (exited):
+        text.color=Colors.WHITE
+    else:
+        text.color=Colors.GREEN
+
+def click(text:TextObject,mouse:MouseObject):
+    echo("Clicked!")
+
+_id=add_text("Click me!",x=10,y=10,color=Colors.WHITE,shadow=True,display_duration=10)
+
+add_mouse_callbacks_and_wait(_id,on_hover=hover,on_click=click)
 ```
 <br></br>
 ## Layer System
@@ -70,10 +91,24 @@ Elements with higher layer values render above elements with lower layers.
  - `add_advanced_texture(...)`
  - `animate_texture(...)`
 
+### Shapes
+ - `add_shape(...)`
+ - `add_advanced_shape(...)`
+ - `animate_shape(...)`
+ - `add_line(...)`
+ - `add_multiline(...)`
+ - `add_triangle(...)`
+ - `add_quad(...)`
+ - `add_circle(...)`
+ - `add_ellipse(...)`
+
 ### Utility functions
  - `argb(...)`
  - `argb_to_int(...)`
+ - `alpha_from_int(...)`
+ - `add_async_mouse_callbacks(...)`
+ - `add_mouse_callbacks_and_wait(...)`
+ - `wait_until_removed(...)`
  - `remove_element(...)`
  - `clear()`
  - `suppress_done_message()`
-
